@@ -1,1 +1,2 @@
 export(batch_sampler_stratified)
+importFrom(data.table, data.table)

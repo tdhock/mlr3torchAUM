@@ -1,25 +1,25 @@
 batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
+  
   torch::sampler(
     "StratifiedSampler",
     initialize = function(data_source) {
       self$data_source <- data_source
       TSK <- data_source$task
       self$stratum <- TSK$col_roles$stratum
-      if(length(self$stratum)==0)stop(TSK$id, "task missing stratum column role")
+      if(length(self$stratum)==0)stop(TSK$id, " task missing stratum column role")
       self$stratum_dt <- data.table(
         TSK$data(cols=self$stratum),
         row.id=1:TSK$nrow)
       self$set_batch_list()
     },
     set_batch_list = function() {
-      get_indices <- if(shuffle){
-        function(n)torch::as_array(torch::torch_randperm(n))+1L
+      .N <- `:=` <- i.in.stratum <- . <- max.i <- n.samp <- batch.i <- NULL
+      ## Above for CRAN check.
+      index_dt <- self$stratum_dt[if(shuffle){
+        torch::as_array(torch::torch_randperm(.N))+1L
       }else{
-        function(n)1:n
-      }
-      index_dt <- self$stratum_dt[
-        get_indices(.N)
-      ][
+        1:.N
+      }][
       , i.in.stratum := 1:.N, by=c(self$stratum)
       ][]
       count_dt <- index_dt[, .(
