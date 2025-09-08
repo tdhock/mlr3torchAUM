@@ -23,5 +23,6 @@ Imports:
 Suggests:
     testthat,
     mlr3,
-    mlr3torch
-
+    mlr3torch,
+    knitr
+VignetteBuilder: knitr

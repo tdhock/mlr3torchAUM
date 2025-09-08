@@ -1,0 +1,67 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Batch size}
+-->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+Below we create an imbalanced version of sonar data set.
+
+```{r}
+sonar_task <- mlr3::tsk("sonar")
+sonar_task$col_roles$stratum <- "Class"
+sonar_task$filter(208:86) # for imbalance.
+Class_vec <- sonar_task$data(sonar_task$row_ids, "Class")$Class
+(count_tab <- table(Class_vec))
+```
+
+The output above shows the overall class counts in the data set.
+Below we compute the frequencies.
+
+```{r}
+count_tab/sum(count_tab)
+```
+
+The output above shows there is about 10% R and 90% M labels overall in the data set.
+
+Below we create a `sonar_list` object, which we will use to show how the stratified sampling works.
+
+```{r}
+sonar_list <- list(task=sonar_task)
+```
+
+In the for loop below, we use `sonar_list` as the input to the class instantiation.
+This is in contrast to the typical use case, in which the input to class instantiation will be a torch dataset.
+Here we use `sonar_list` instead (not a real dataset) because we want to give a simple example that does not need torch.
+
+```{r}
+batch_mat_list <- list()
+batch_df_list <- list()
+for(min_samples_per_stratum in c(1:7, 200)){
+  batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
+    min_samples_per_stratum = min_samples_per_stratum)
+  batch_sampler_instance <- batch_sampler_class(sonar_list)
+  batch_df_list[[min_samples_per_stratum]] <- data.frame(
+    min_samples_per_stratum, batch_size=batch_sampler_instance$batch_size)
+  ## In the counts below there is 1 R per batch/column.
+  batch_mat_list[[paste0(
+    "min_samples_per_stratum=", min_samples_per_stratum
+  )]] <- sapply(batch_sampler_instance$batch_list, function(i)table(Class_vec[i]))
+}
+do.call(rbind, batch_df_list)
+```
+
+The output above shows the batch size as a function of the sampler parameter, `min_samples_per_stratum`.
+It is clear that they increase together, up to a certain point (7) at which the batch size achieves its max, equal to the number of samples of the data set (which will result in full gradient descent, not stochastic/batch gradient).
+
+```{r}
+batch_mat_list
+```
+
+The output above shows the number of labels in each batch.
+It is clear that the number of minority class labels respects the `min_samples_per_stratum` parameter in each case.
