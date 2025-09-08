@@ -1,0 +1,11 @@
+mlr3torchAUM
+
+Learning with Area Under the Minimum in the mlr3torch framework
+
+** Installation
+
+** Usage
+
+** Related work
+
+- =mlr3torchAUM::batch_sampler_stratified= adapted from [[https://tdhock.github.io/blog/2025/mlr3torch-batch-samplers/][this blog]].
