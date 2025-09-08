@@ -1,5 +1,6 @@
 batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
-  
+  .N <- `:=` <- i.in.stratum <- . <- max.i <- n.samp <- batch.i <- self <- NULL
+  ## Above for CRAN check.
   torch::sampler(
     "StratifiedSampler",
     initialize = function(data_source) {
@@ -13,10 +14,12 @@ batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
       self$set_batch_list()
     },
     set_batch_list = function() {
-      .N <- `:=` <- i.in.stratum <- . <- max.i <- n.samp <- batch.i <- NULL
-      ## Above for CRAN check.
       index_dt <- self$stratum_dt[if(shuffle){
-        torch::as_array(torch::torch_randperm(.N))+1L
+        if(torch::torch_is_installed()){
+          torch::as_array(torch::torch_randperm(.N))+1L
+        }else{
+          sample(.N)
+        }
       }else{
         1:.N
       }][

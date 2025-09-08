@@ -27,38 +27,29 @@ Toby Dylan Hocking
 }
 \examples{
 
-if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
+## Imbalanced version of sonar data set.
+sonar_task <- mlr3::tsk("sonar")
+sonar_task$col_roles$stratum <- "Class"
+sonar_task$filter(208:86) # for imbalance.
+Class_vec <- sonar_task$data(sonar_task$row_ids, "Class")$Class
+(count_tab <- table(Class_vec))
+count_tab/sum(count_tab) # ~10% R, ~90% M.
 
-  # this is a typical use case.
-  sonar_task <- mlr3::tsk("sonar")
-  sonar_task$col_roles$stratum <- "Class"
+## Not a typical use case, but shows class distribution in each batch.
+sonar_list <- list(task=sonar_task)
+batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
+  min_samples_per_stratum = 1)
+batch_sampler_instance <- batch_sampler_class(sonar_list)
+## In the counts below there is 1 R per batch/column.
+sapply(batch_sampler_instance$batch_list, function(i)table(Class_vec[i]))
+
+## Typical use case below is as the batch_sampler param in a TorchLearner.
+if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
   L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
   L$param_set$set_values(
     epochs=1, batch_size=10, seed=1,
-    batch_sampler=mlr3torchAUM::batch_sampler_stratified(1))
+    batch_sampler=batch_sampler_class)
   L$train(sonar_task)
-
-  # this is what mlr3torch does internally (users should typically not do this).
-  sonar_task <- mlr3::tsk("sonar")
-  sonar_task$filter(208:86) # for imbalance.
-  (count_tab <- table(sonar_task$data(sonar_task$row_ids, "Class")$Class))
-  count_tab/sum(count_tab)
-  sonar_task$col_roles$stratum <- "Class"
-  sonar_dataset <- mlr3torch::task_dataset(
-    sonar_task,
-    list(fea=mlr3torch::TorchIngressToken(c("V1","V2"), mlr3torch::batchgetter_num)),
-    function(data)torch::torch_tensor(ifelse(data$Class=="M", 1, 0)))
-  batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
-    min_samples_per_stratum = 1)
-  torch::torch_manual_seed(5)
-  batch_sampler_instance <- batch_sampler_class(sonar_dataset)
-  sonar_dl <- torch::dataloader(sonar_dataset, batch_sampler=batch_sampler_instance)
-  tab_list <- list()
-  coro::loop(for(batch in sonar_dl) {
-    tab_list[[length(tab_list)+1]] <- table(torch::as_array(batch$y))
-  })
-  do.call(rbind, tab_list) # each batch has 1 negative example.
-  
 }
 
 }
