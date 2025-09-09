@@ -32,7 +32,7 @@ batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
       num_batches <- max(1, count_min %/% min_samples_per_stratum)
       max_samp <- num_batches * min_samples_per_stratum
       index_dt[
-      , n.samp := i.in.stratum/max(i.in.stratum)*max_samp
+      , n.samp := (max_samp/max(i.in.stratum))*i.in.stratum
       , by=c(self$stratum)
       ][
       , batch.i := ceiling(n.samp/min_samples_per_stratum)
