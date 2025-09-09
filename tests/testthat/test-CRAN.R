@@ -1,9 +1,21 @@
 library(testthat)
-library(mlr3torchAUM)
 
-run_tests <- torch::torch_is_installed() && requireNamespace("mlr3torch")
+test_that("min 1 spam per batch", {
+  spam_task <- mlr3::tsk("spam")
+  spam_task$col_roles$stratum <- "type"
+  spam_task$filter(1510:4601) # for 10% minority spam class.
+  Class_vec <- spam_task$data(spam_task$row_ids, "type")$type
+  (count_tab <- table(Class_vec))
+  count_tab/sum(count_tab)
+  spam_list <- list(task=spam_task)
+  batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
+    min_samples_per_stratum = 1)
+  batch_sampler_instance <- batch_sampler_class(spam_list)
+  batch_count_mat <- sapply(batch_sampler_instance$batch_list, function(i)table(Class_vec[i]))
+  expect_equal(sum(batch_count_mat["spam",] >= 1), ncol(batch_count_mat))
+})
 
-if(run_tests){
+if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
 
   test_that("two learners have same weights", {
     sonar_task <- mlr3::tsk("sonar")
