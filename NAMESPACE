@@ -1,2 +1,2 @@
-export(batch_sampler_stratified, MeasureClassifROCAUM, MeasureClassifInvAUC, nn_ROCAUM_loss)
+export(batch_sampler_stratified, batch_sampler_random, MeasureClassifROCAUM, MeasureClassifInvAUC, nn_ROCAUM_loss)
 importFrom(data.table, data.table)

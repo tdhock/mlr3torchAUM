@@ -1,0 +1,155 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Typical usage}
+-->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+Below we create an imbalanced version of spam data set.
+
+```{r}
+spam_task <- mlr3::tsk("spam")
+spam_task$filter(1504:4293) # for imbalance.  310    2480 
+Class_vec <- spam_task$data(spam_task$row_ids, "type")$type
+(count_tab <- table(Class_vec))
+```
+
+The output above shows the overall class counts in the data set.
+Below we compute the frequencies.
+
+```{r}
+count_tab/sum(count_tab)
+```
+
+The output above shows there is about 10% spam and 90% nonspam labels overall in the data set.
+
+Below we create a `spam_list` object, which we will use to show how the stratified sampling works.
+
+```{r}
+library(data.table)
+orig_X_dt <- spam_task$data(spam_task$row_ids, spam_task$col_roles$feature)
+sc_X_dt <- data.table(type=Class_vec, scale(orig_X_dt))
+spam_sc_task <- mlr3::TaskClassif$new("spam_sc", sc_X_dt, target="type")
+spam_sc_task$col_roles$stratum <- "type"
+
+spam_list <- list(task=spam_sc_task)
+batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
+  min_samples_per_stratum = 1)
+batch_sampler_instance <- batch_sampler_class(spam_list)
+(batch_dt <- as.data.table(t(sapply(
+  batch_sampler_instance$batch_list,
+  function(i)table(Class_vec[i])
+)), key=c("spam","nonspam")))
+(batch_size <- batch_sampler_instance$batch_size)
+```
+
+The output above shows that 
+
+* there are 310 batches
+* all batches have 1 spam label, and 8 nonspam labels,
+* so the batch size is 9.
+
+## Comparison with usual batching
+
+To do the usual torch batching, we first create a learner, and use it to derive a dataset:
+
+```{r}
+L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
+spam_dataset <- L$dataset(spam_sc_task)
+```
+
+Then we compare the two data loading mechanisms:
+
+```{r}
+batch_y_dt_list <- list()
+for(set_batch_sampler in c(TRUE, FALSE)){
+  spam_loader <- torch::dataloader(
+    spam_dataset, batch_size=batch_size, shuffle=TRUE,
+    batch_sampler=if(set_batch_sampler)batch_sampler_instance)
+  batch.i <- 0
+  torch::torch_manual_seed(2)
+  coro::loop(for(batch in spam_loader){
+    batch.i <- batch.i+1
+    batch_y_dt_list[[paste(set_batch_sampler, batch.i)]] <- data.table(
+      set_batch_sampler, batch.i,
+      type=ifelse(torch::as_array(batch$y$flatten())==1, "spam", "nonspam"))
+  })
+}
+(batch_y_dt <- rbindlist(batch_y_dt_list))
+(batch_y_counts <- dcast(batch_y_dt, set_batch_sampler + batch.i ~ type, length))
+batch_y_counts[, table(set_batch_sampler, spam)]
+```
+
+The output above shows that 
+
+* when `set_batch_sampler=FALSE` (random batching) there are over 100 batches with no positive/spam labels, which could be problematic for learning with complex loss functions that require at least one of each label in each batch (otherwise gradient zero).
+* when `set_batch_sampler=TRUE` (stratified batching) each of the 310 batches has one positive/spam label.
+
+## Benchmark comparison
+
+The real test of the sampler is 
+
+```{r}
+measure_list <- list(
+  mlr3torchAUM::MeasureClassifInvAUC$new(),
+  mlr3torchAUM::MeasureClassifROCAUM$new())
+history_dt_list <- list()
+weight_list <- list()
+batch_sampler_list <- list(
+  random_full=mlr3torchAUM::batch_sampler_random(10000),
+  stratified_full=mlr3torchAUM::batch_sampler_stratified(10000),
+  random_stoch=mlr3torchAUM::batch_sampler_random(9),
+  stratified_stoch=mlr3torchAUM::batch_sampler_stratified(1))
+for(batching in names(batch_sampler_list)){
+  L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
+  L$loss <- torch::nn_aum_loss
+  L$optimizer <- mlr3torch::t_opt("sgd", lr=0.001)
+  L$predict_type <- "prob"
+  L$callbacks <- mlr3torch::t_clbk("history")
+  L$param_set$set_values(
+    epochs=20, batch_size=batch_size, seed=1, p=0,
+    measures_valid=measure_list,
+    measures_train=measure_list,
+    batch_sampler=batch_sampler_list[[batching]])
+  set.seed(1)
+  mlr3::set_validate(L, 0.5)
+  L$train(spam_sc_task)
+  weight_list[[batching]] <- torch::as_array(L$model$network$parameters[[1]])
+  history_dt_list[[batching]] <- data.table(
+    batching,
+    L$model$callbacks$history)
+}
+do.call(rbind, weight_list)
+(history_dt <- rbindlist(history_dt_list))
+
+(history_long <- melt(
+  history_dt,
+  measure.vars=measure(set, measure, pattern="(.*).classif.(.*)")
+)[
+, Set := ifelse(set=="train", "subtrain", "validation")
+][
+, c("sampling","size") := tstrsplit(batching,"_")
+])
+if(require(ggplot2)){
+  ggplot()+
+    theme_bw()+
+    geom_hline(aes(
+      yintercept=value),
+      color="grey",
+      data=data.frame(value=0.5, measure="invauc"))+
+    theme(text=element_text(size=20))+
+    geom_line(aes(
+      epoch, value, color=Set),
+      size=1,
+      data=history_long)+
+    facet_grid(measure ~ size + sampling, scales="free", labeller=label_both)+
+    scale_y_log10()
+}
+```
+
+TODO add if torch is installed.

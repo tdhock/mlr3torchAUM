@@ -24,5 +24,6 @@ Suggests:
     testthat,
     mlr3,
     mlr3torch,
-    knitr, markdown
+    knitr, markdown,
+    ggplot2
 VignetteBuilder: knitr

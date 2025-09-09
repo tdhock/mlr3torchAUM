@@ -1,0 +1,5 @@
+Changes in version 2025.9.8
+
+- batch_sampler_stratified() and batch_sampler_random() adapted from blog.
+- measures: MeasureClassifInvAUC, MeasureClassifROCAUM. 
+- torch loss: nn_ROCAUM_loss.
