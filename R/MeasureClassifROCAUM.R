@@ -37,16 +37,16 @@ ROCAUM <- function(pred_tensor, label_tensor){
 
 nn_ROCAUM_loss <- torch::nn_module(
   "nn_ROCAUM_loss",
-  inherit = torch::nn_mse_loss,
+  inherit = torch::nn_bce_with_logits_loss,
   initialize = function() {
     super$initialize()
   },
   forward = ROCAUM
 )
 
-MeasureClassifROCAUM = R6::R6Class(
+MeasureClassifROCAUM = R6Class(
   "ROCAUM",
-  inherit = mlr3::MeasureClassif,
+  inherit = MeasureClassif,
   public = list(
     initialize = function() { 
       super$initialize(
@@ -70,11 +70,11 @@ MeasureClassifROCAUM = R6::R6Class(
   )
 )
 
-MeasureClassifInvAUC = R6::R6Class(
+MeasureClassifInvAUC = R6Class(
   "InvAUC",
-  inherit = mlr3::MeasureClassif,
+  inherit = MeasureClassif,
   public = list(
-    AUC=mlr3::msr("classif.auc"),
+    AUC=msr("classif.auc"),
     initialize = function() { 
       super$initialize(
         id = "classif.invauc",

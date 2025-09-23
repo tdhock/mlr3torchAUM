@@ -107,7 +107,7 @@ batch_sampler_list <- list(
   stratified_stoch=mlr3torchAUM::batch_sampler_stratified(1))
 for(batching in names(batch_sampler_list)){
   L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
-  L$loss <- torch::nn_aum_loss
+  L$loss <- mlr3torchAUM::nn_ROCAUM_loss
   L$optimizer <- mlr3torch::t_opt("sgd", lr=0.001)
   L$predict_type <- "prob"
   L$callbacks <- mlr3torch::t_clbk("history")

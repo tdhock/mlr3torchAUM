@@ -20,10 +20,11 @@ Imports:
     data.table,
     torch,
     mlr3,
-    mlr3torch,
-    coro
+    coro,
+    R6
 Suggests:
     testthat,
     knitr, markdown,
+    mlr3torch,
     ggplot2
 VignetteBuilder: knitr
