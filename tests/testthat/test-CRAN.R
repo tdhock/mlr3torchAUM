@@ -1,4 +1,5 @@
 library(testthat)
+data.table::setDTthreads(1L)
 
 test_that("min 1 spam per batch", {
   spam_task <- mlr3::tsk("spam")

@@ -35,8 +35,11 @@ if(torch::torch_is_installed()){
   label_tensor <- torch::torch_tensor(c(1,0))
   linear_model <- torch::nn_linear(n_feat, 1)
   pred_vec <- linear_model(features)
-  loss_fun <- mlr3torchAUM::nn_ROCAUM_loss()
+  count_env <- new.env()
+  loss_class <- mlr3torchAUM::get_nn_ROCAUM_loss(count_env)
+  loss_fun <- loss_class()
   (loss_tensor <- loss_fun(pred_vec, label_tensor))
+  with(count_env, data.frame(evals, zeros, all_one_class))
   loss_tensor$backward()
   sapply(linear_model$parameters, "[[", "grad")
 }

@@ -31,6 +31,7 @@ Toby Dylan Hocking
 }
 \examples{
 
+data.table::setDTthreads(1L)
 ## Imbalanced version of sonar data set.
 sonar_task <- mlr3::tsk("sonar")
 sonar_task$col_roles$stratum <- "Class"

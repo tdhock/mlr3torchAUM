@@ -36,6 +36,8 @@ ROCAUM <- function(pred_tensor, label_tensor){
 }
 
 get_nn_ROCAUM_loss <- function(e=NULL){
+  super <- NULL
+  ## Above to suppress CRAN NOTE.
   torch::nn_module(
     "nn_ROCAUM_loss",
     inherit = torch::nn_bce_with_logits_loss,
