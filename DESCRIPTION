@@ -18,10 +18,8 @@ URL: https://github.com/tdhock/mlr3torchAUM
 BugReports: https://github.com/tdhock/mlr3torchAUM/issues
 Imports:
     data.table,
-    torch,
-    mlr3,
-    coro,
-    R6
+    torch, coro, R6,
+    mlr3, mlr3misc, lgr
 Suggests:
     testthat,
     knitr, markdown,
