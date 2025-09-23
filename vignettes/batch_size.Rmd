@@ -6,8 +6,8 @@
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
-)
+  comment = "#>")
+data.table::setDTthreads(1L)
 ```
 
 Below we create an imbalanced version of sonar data set.

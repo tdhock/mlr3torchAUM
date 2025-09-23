@@ -19,10 +19,13 @@ BugReports: https://github.com/tdhock/mlr3torchAUM/issues
 Imports:
     data.table,
     torch,
-    coro
+    mlr3,
+    coro,
+    R6
 Suggests:
     testthat,
-    mlr3,
+    knitr, markdown,
     mlr3torch,
-    knitr, markdown
+    ggplot2,
+    future, future.apply
 VignetteBuilder: knitr

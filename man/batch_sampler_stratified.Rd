@@ -1,16 +1,20 @@
 \name{batch_sampler_stratified}
 \alias{batch_sampler_stratified}
+\alias{batch_sampler_random}
 \title{
-  Stratified batch sampler
+  Stratified and random batch samplers
 }
 \description{
-  The value returned by this function can be used as the
+  The value returned by these functions can be used as the
   \code{batch_sampler} parameter of a \code{TorchLearner}.
 }
 \usage{
+batch_sampler_random(batch_size, shuffle = TRUE)
 batch_sampler_stratified(min_samples_per_stratum, shuffle = TRUE)
 }
 \arguments{
+  \item{batch_size}{Size of each batch except the last, which may have
+    fewer samples.}
   \item{min_samples_per_stratum}{For each batch, this is the minimum
     number of samples that there will be of each stratum. \code{1L} is
     the smallest possible value. Increasing this value causes batch size
@@ -27,6 +31,7 @@ Toby Dylan Hocking
 }
 \examples{
 
+data.table::setDTthreads(1L)
 ## Imbalanced version of sonar data set.
 sonar_task <- mlr3::tsk("sonar")
 sonar_task$col_roles$stratum <- "Class"
@@ -42,6 +47,12 @@ batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
 batch_sampler_instance <- batch_sampler_class(sonar_list)
 ## In the counts below there is 1 R per batch/column.
 sapply(batch_sampler_instance$batch_list, function(i)table(Class_vec[i]))
+
+## Whereas some batches have 0 R with random:
+random_sampler_class <- mlr3torchAUM::batch_sampler_random(
+  batch_size = 10)
+random_sampler_instance <- random_sampler_class(sonar_list)
+sapply(random_sampler_instance$batch_list, function(i)table(Class_vec[i]))
 
 ## Typical use case below is as the batch_sampler param in a TorchLearner.
 if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
