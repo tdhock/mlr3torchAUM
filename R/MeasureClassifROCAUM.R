@@ -35,32 +35,26 @@ ROCAUM <- function(pred_tensor, label_tensor){
   torch::torch_sum(min_FPR_FNR * constant_diff)
 }
 
-get_nn_ROCAUM_loss <- function(e=NULL){
-  super <- NULL
-  ## Above to suppress CRAN NOTE.
-  torch::nn_module(
-    "nn_ROCAUM_loss",
-    inherit = torch::nn_bce_with_logits_loss,
-    initialize = function() {
-      super$initialize()
-      if(is.environment(e)){
-        e$evals <- 0L
-        e$zeros <- 0L
-        e$all_one_class <- 0L
-      }
-    },
-    forward = function(pred_tensor, label_tensor){
-      loss_tensor <- ROCAUM(pred_tensor, label_tensor)
-      if(is.environment(e)){
-        e$evals <- e$evals+1L
-        if(torch::as_array(loss_tensor==0))e$zeros <- e$zeros+1L
-        if(torch::as_array((label_tensor[1]==label_tensor)$all()))
-          e$all_one_class <- e$all_one_class+1L
-      }
-      loss_tensor
+nn_ROCAUM_loss <- torch::nn_module(
+  c("nn_ROCAUM_loss", "nn_loss"),
+  initialize = function() {
+    for(name in c("evals","zeros","all_one_class")){
+      self$buffer(name)
     }
-  )
-}
+  },
+  buffer = function(name, value=torch::torch_tensor(0L)){
+    self[[name]] <- torch::nn_buffer(value)
+  },
+  increment = function(name)self$buffer(name, self[[name]]+1L),
+  forward = function(pred_tensor, label_tensor){
+    loss_tensor <- ROCAUM(pred_tensor, label_tensor)
+    self$increment("evals")
+    if(torch::as_array(loss_tensor==0))self$increment("zeros")
+    if(torch::as_array((label_tensor[1]==label_tensor)$all()))
+      self$increment("all_one_class")
+    loss_tensor
+  }
+)
 
 MeasureClassifROCAUM = R6Class(
   "ROCAUM",
