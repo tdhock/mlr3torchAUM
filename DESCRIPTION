@@ -26,5 +26,6 @@ Suggests:
     testthat,
     knitr, markdown,
     mlr3torch,
-    ggplot2
+    ggplot2,
+    future, future.apply
 VignetteBuilder: knitr
