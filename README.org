@@ -4,7 +4,45 @@ Learning with Area Under the Minimum in the mlr3torch framework
 
 ** Installation
 
+#+begin_src R
+  remotes::install_github("tdhock/mlr3torchAUM")
+#+end_src
+
 ** Usage
+
+*** New batch samplers
+
+#+begin_src R
+  mlr3torchAUM::batch_sampler_random(batch_size=9)
+  mlr3torchAUM::batch_sampler_stratified(min_samples_per_stratum=1)
+#+end_src
+
+Both can be used as the =batch_sampler= parameter in a =TorchLearner=, as below.
+
+#+begin_src R
+  L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
+  L$param_set$set_values(
+    batch_sampler=mlr3torchAUM::batch_sampler_stratified(1))
+#+end_src
+
+Why do we need =batch_sampler_random=?
+It uses torch randomness in a different way than the default sampler;
+this method is compatible with =batch_sampler_stratified=,
+so they can be used together for a controlled comparison between random and stratified sampling.
+
+*** New mlr3 measures
+
+- Inverse AUC is 1-AUC, so we can visualize using a log scale and more easily see how close it gets to zero (=how close AUC gets to 1).
+  This is a piecewise constant (non-differentiable) evaluation metric.
+- ROC-AUM is Area Under Minimum of False Positive and False Negative Rates, see [[https://jmlr.org/papers/v24/21-0751.html][our JMLR'23 paper]] for details.
+  This can be used as a surrogate loss for ROC curve optimization, because it is differentiable almost everywhere.
+  This Measure is useful for monitoring how much it decreases in every epoch of learning, using the history callback.
+
+#+begin_src R
+  L$loss <- mlr3torchAUM::nn_ROCAUM_loss
+  L$param_set$set_values(
+    measures_train=mlr3::msrs(c("classif.rocaum","classif.invauc")))
+#+end_src
 
 ** Related work
 
