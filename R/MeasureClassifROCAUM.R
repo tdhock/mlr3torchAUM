@@ -51,6 +51,7 @@ MeasureClassifROCAUM = R6Class(
     initialize = function() { 
       super$initialize(
         id = "classif.rocaum",
+        label = "Area Under Minimum of False Positive and False Negative Rates",
         packages = "torch",
         properties = character(),
         task_properties = "twoclass",
@@ -78,11 +79,12 @@ MeasureClassifInvAUC = R6Class(
     initialize = function() { 
       super$initialize(
         id = "classif.invauc",
+        label = "1-Area Under ROC Curve",
         packages = "torch",
         properties = character(),
         task_properties = "twoclass",
         predict_type = "prob",
-        range = c(0, Inf),
+        range = c(0, 1),
         minimize = TRUE
       )
     }
