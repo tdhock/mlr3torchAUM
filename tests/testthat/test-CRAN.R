@@ -26,7 +26,7 @@ if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
       L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
       L$param_set$set_values(
         epochs=1, batch_size=10, seed=1,
-        batch_sampler=batch_sampler_stratified(1))
+        batch_sampler=mlr3torchAUM::batch_sampler_stratified(1))
       L$train(sonar_task)
       param_list[[rep_i]] <- L$model$network$parameters
     }
@@ -38,7 +38,7 @@ if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
     L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
     L$param_set$set_values(
       epochs=1, batch_size=10, seed=1,
-      batch_sampler=batch_sampler_stratified(1))
+      batch_sampler=mlr3torchAUM::batch_sampler_stratified(1))
     expect_error({
       L$train(sonar_task)
     }, "sonar task missing stratum column role")
