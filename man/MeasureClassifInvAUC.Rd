@@ -11,10 +11,6 @@
   \code{measures_train} and
   \code{measures_valid}.
 }
-\usage{
-MeasureClassifROCAUM$new()
-MeasureClassifInvAUC$new()
-}
 \format{R6 Class inherting from \code{\link[mlr3]{MeasureClassif}}.}
 \examples{
 
