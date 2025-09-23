@@ -105,6 +105,7 @@ if(torch_available){
     mlr3torchAUM::MeasureClassifROCAUM$new())
   history_dt_list <- list()
   weight_list <- list()
+  loss_eval_dt_list <- list()
   batch_sampler_list <- list(
     random_full=mlr3torchAUM::batch_sampler_random(10000),
     stratified_full=mlr3torchAUM::batch_sampler_stratified(10000),
@@ -112,23 +113,26 @@ if(torch_available){
     stratified_stoch=mlr3torchAUM::batch_sampler_stratified(1))
   for(batching in names(batch_sampler_list)){
     L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
-    L$loss <- mlr3torchAUM::nn_ROCAUM_loss
+    my_env <- new.env()
+    L$loss <- mlr3torchAUM:::get_nn_ROCAUM_loss(my_env)
     L$optimizer <- mlr3torch::t_opt("sgd", lr=0.001)
     L$predict_type <- "prob"
     L$callbacks <- mlr3torch::t_clbk("history")
     L$param_set$set_values(
-      epochs=20, batch_size=batch_size, seed=1, p=0,
+      epochs=20, batch_size=batch_size, seed=1,
       measures_valid=measure_list,
       measures_train=measure_list,
       batch_sampler=batch_sampler_list[[batching]])
     set.seed(1)
     mlr3::set_validate(L, 0.5)
     L$train(spam_sc_task)
-    weight_list[[batching]] <- torch::as_array(
-      L$model$network$parameters[["0.weight"]]$flatten())
+    loss_eval_dt_list[[batching]] <- with(my_env, data.table(
+      batching, evals, zeros, all_one_class))
     history_dt_list[[batching]] <- data.table(
       batching,
       L$model$callbacks$history)
+    weight_list[[batching]] <- torch::as_array(
+      L$model$network$parameters[["0.weight"]]$flatten())
   }
   print(do.call(data.table, weight_list), nrow=10)
 }
@@ -141,6 +145,19 @@ This means we have controlled the randomness:
 * the random initialization of the network was the same,
 * the random division of train into subtrain/validation was the same,
 * and the random selection of batches was the same.
+
+Another result computed above is the number of evaluations of the loss function, which we examine in the code below.
+
+```{r}
+rbindlist(loss_eval_dt_list)
+```
+
+The output above shows that the number of loss function evaluations is 
+
+* the same as the number of epochs for full batching methods.
+* over 3000 for stochastic batching methods, but in these cases we have a significant number of batches with loss of zero (no gradient to learn from).
+
+Next, we plot the history of AUM loss and 1-AUC values at each epoch.
 
 ```{r}
 if(torch_available){
@@ -175,3 +192,5 @@ We see in the result figure above that
 
 * for `size=full` the results are identical, as expected.
 * for `size=stoch` the results are similar but stratified sampling is slightly better optimization of subtrain loss (because it sees more batches with non-zero gradients).
+
+Overall, we can see that the batch samplers are working as expected.

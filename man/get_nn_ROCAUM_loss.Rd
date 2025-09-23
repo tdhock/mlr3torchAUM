@@ -1,5 +1,5 @@
-\name{nn_ROCAUM_loss}
-\alias{nn_ROCAUM_loss}
+\name{get_nn_ROCAUM_loss}
+\alias{get_nn_ROCAUM_loss}
 \title{
   torch module class for ROC AUM loss
 }
@@ -8,7 +8,11 @@
   can be used as a surrogate for ROC curve optimization.
 }
 \usage{
-nn_ROCAUM_loss()
+get_nn_ROCAUM_loss(e)
+}
+\arguments{
+  \item{e}{\code{NULL} (default) or environment in which to store counts
+    of loss function evaluations, zeros, and batches with all one class.}
 }
 \value{
   torch module instance for ROC AUM loss

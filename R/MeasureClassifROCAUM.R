@@ -35,14 +35,30 @@ ROCAUM <- function(pred_tensor, label_tensor){
   torch::torch_sum(min_FPR_FNR * constant_diff)
 }
 
-nn_ROCAUM_loss <- torch::nn_module(
-  "nn_ROCAUM_loss",
-  inherit = torch::nn_bce_with_logits_loss,
-  initialize = function() {
-    super$initialize()
-  },
-  forward = ROCAUM
-)
+get_nn_ROCAUM_loss <- function(e=NULL){
+  torch::nn_module(
+    "nn_ROCAUM_loss",
+    inherit = torch::nn_bce_with_logits_loss,
+    initialize = function() {
+      super$initialize()
+      if(is.environment(e)){
+        e$evals <- 0L
+        e$zeros <- 0L
+        e$all_one_class <- 0L
+      }
+    },
+    forward = function(pred_tensor, label_tensor){
+      loss_tensor <- ROCAUM(pred_tensor, label_tensor)
+      if(is.environment(e)){
+        e$evals <- e$evals+1L
+        if(torch::as_array(loss_tensor==0))e$zeros <- e$zeros+1L
+        if(torch::as_array((label_tensor[1]==label_tensor)$all()))
+          e$all_one_class <- e$all_one_class+1L
+      }
+      loss_tensor
+    }
+  )
+}
 
 MeasureClassifROCAUM = R6Class(
   "ROCAUM",
