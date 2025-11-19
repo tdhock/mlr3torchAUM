@@ -42,8 +42,7 @@ count_tab/sum(count_tab) # ~10% R, ~90% M.
 
 ## Not a typical use case, but shows class distribution in each batch.
 sonar_list <- list(task=sonar_task)
-batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
-  min_samples_per_stratum = 1)
+batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(min_samples_per_stratum = 1)
 batch_sampler_instance <- batch_sampler_class(sonar_list)
 ## In the counts below there is 1 R per batch/column.
 sapply(batch_sampler_instance$batch_list, function(i)table(Class_vec[i]))
@@ -56,7 +55,7 @@ sapply(random_sampler_instance$batch_list, function(i)table(Class_vec[i]))
 ## Typical use case below is as the batch_sampler param in a TorchLearner.
 if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
   L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
-  L$param_set$set_values(epochs=1, batch_sampler=batch_sampler_class)
+  L$param_set$set_values(epochs=1, shuffle=NULL, batch_sampler=batch_sampler_class)
   L$train(sonar_task)
 }
 
