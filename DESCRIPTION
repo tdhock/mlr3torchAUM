@@ -27,3 +27,4 @@ Suggests:
     ggplot2,
     future, future.apply
 VignetteBuilder: knitr
+Remotes: mlr-org/mlr3torch@dont-require-batch-size
