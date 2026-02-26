@@ -1,6 +1,7 @@
 batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
   .N <- `:=` <- i.in.stratum <- . <- max.i <- n.samp <- batch.i <- self <- NULL
   ## Above for CRAN check.
+  methods <- batch_sampler_methods(shuffle)
   torch::sampler(
     "StratifiedSampler",
     initialize = function(data_source) {
@@ -14,15 +15,7 @@ batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
       self$set_batch_list()
     },
     set_batch_list = function() {
-      index_dt <- self$stratum_dt[if(shuffle){
-        if(torch::torch_is_installed()){
-          torch::as_array(torch::torch_randperm(.N))+1L
-        }else{
-          sample(.N)
-        }
-      }else{
-        1:.N
-      }][
+      index_dt <- self$stratum_dt[self$.shuffled_index(.N)][
       , i.in.stratum := 1:.N, by=c(self$stratum)
       ][]
       count_dt <- index_dt[, .(
@@ -42,22 +35,8 @@ batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
       self$batch_size_tab <- sort(table(self$batch_sizes))
       self$batch_size <- as.integer(names(self$batch_size_tab)[length(self$batch_size_tab)])
     },
-    .iter = function() {
-      batch.i <- 0
-      function() {
-        if (batch.i < length(self$batch_list)) {
-          batch.i <<- batch.i + 1L
-          indices <- self$batch_list[[batch.i]]
-          if (batch.i == length(self$batch_list)) {
-            self$set_batch_list()
-          }
-          return(indices)
-        }
-        coro::exhausted()
-      }
-    },
-    .length = function() {
-      length(self$batch_list)
-    }
+    .shuffled_index = methods$.shuffled_index,
+    .iter = methods$.iter,
+    .length = methods$.length
   )
 }
