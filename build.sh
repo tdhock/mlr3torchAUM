@@ -1,5 +1,6 @@
 #!/bin/bash
 set -o errexit
+set -o pipefail
 PREGEX="^Package: "
 PKG=$(grep $PREGEX DESCRIPTION|sed "s/$PREGEX//")
 echo Package from DESCRIPTION: $PKG
