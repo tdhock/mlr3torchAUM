@@ -221,7 +221,8 @@ if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
     for(shuffle in c(TRUE, FALSE)){
       L$param_set$set_values(
         epochs=1, batch_size=10, seed=1,
-        batch_sampler=mlr3torchAUM::batch_sampler_stratified(1, shuffle=shuffle))
+        batch_sampler=mlr3torchAUM::batch_sampler_stratified(
+          1, shuffle=shuffle))
       expect_error({
         L$train(sonar_task)
       }, "sonar task missing stratum column role")
