@@ -5,7 +5,7 @@ batch_sampler_random <- function(batch_size, shuffle=TRUE){
     "RandomSampler",
     initialize = function(data_source) {
       self$N <- data_source$task$nrow
-      self$batch_vec <- seq_len(self$N) %/% batch_size
+      self$batch_vec <- (seq_len(self$N)-1L) %/% batch_size
       self$set_batch_list()
     },
     set_batch_list = function() {
