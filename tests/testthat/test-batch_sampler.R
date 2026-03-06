@@ -126,6 +126,7 @@ test_that("stratified sampler: shuffle, unit test", {
   Class_vec <- sonar_task$data(sonar_task$row_ids, "Class")$Class
   batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
     min_samples_per_stratum = 1, shuffle = TRUE)
+  batch_list_list <- list()
   batch_sampler_instance <- batch_sampler_class(list(task = sonar_task))
   for(rep in 1:2){
     if(torch::torch_is_installed()){
