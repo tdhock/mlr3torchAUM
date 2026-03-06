@@ -3,7 +3,7 @@ batch_sampler_stratified <- function(min_samples_per_stratum, shuffle=TRUE){
   ## Above for CRAN check.
   torch::sampler(
     "StratifiedSampler",
-    inherit = batch_sampler_base,
+    inherit = BaseSampler,
     initialize = function(data_source) {
       self$data_source <- data_source
       TSK <- data_source$task

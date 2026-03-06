@@ -1,6 +1,6 @@
 .N <- `:=` <- i.in.stratum <- . <- max.i <- n.samp <- batch.i <- self <- NULL
 ## Above for CRAN check.
-batch_sampler_base <-  torch::sampler(
+BaseSampler <-  torch::sampler(
   "BaseSampler",
   initialize = function(data_source) {
     self$set_batch_list()

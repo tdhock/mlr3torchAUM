@@ -3,7 +3,7 @@ batch_sampler_random <- function(batch_size, shuffle=TRUE){
   ## Above for CRAN check.
   torch::sampler(
     "RandomSampler",
-    inherit = batch_sampler_base,
+    inherit = BaseSampler,
     initialize = function(data_source) {
       self$N <- data_source$task$nrow
       self$batch_vec <- seq_len(self$N) %/% batch_size
