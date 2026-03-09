@@ -4,15 +4,14 @@ ROCAUM <- function(pred_tensor, label_tensor){
   list2env(BaseMetricCalculator(function(is_positive){
       if(all(as.logical(is_positive)) || all(as.logical(!is_positive))){
         return(torch::torch_sum(label_tensor*0))}
-  })(pred_tensor, label_tensor),
-  envir = environment()) # p_total, n_total, FPR, FNR, uniq_thresh
+  })(pred_tensor, label_tensor),envir = environment())
   roc = list(
     FPR=FPR,
     FNR=FNR,
     TPR=1 - FNR,
     "min(FPR,FNR)"=torch::torch_minimum(FPR, FNR),
-    min_constant=torch::torch_cat(c(torch::torch_tensor(-Inf), uniq_thresh)),
-    max_constant=torch::torch_cat(c(uniq_thresh, torch::torch_tensor(Inf))))
+    min_constant=min_constant,
+    max_constant=max_constant)
   min_FPR_FNR = roc[["min(FPR,FNR)"]][2:-2]
   constant_diff = roc$min_constant[2:N]$diff()
   torch::torch_sum(min_FPR_FNR * constant_diff)

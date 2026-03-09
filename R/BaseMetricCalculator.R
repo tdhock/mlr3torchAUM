@@ -28,6 +28,8 @@ BaseMetricCalculator <- function(.label_sanity_check=NULL){
     FPR = torch::torch_cat(list(torch::torch_tensor(0.0), uniq_fp_after))
     FNR = torch::torch_cat(list(uniq_fn_before, torch::torch_tensor(0.0)))
     return(list(p_total=p_total, n_total=n_total,
-    FPR=FPR, FNR=FNR, uniq_thresh=uniq_thresh))
+    FPR=FPR, FNR=FNR,
+    min_constant=torch::torch_cat(list(torch::torch_tensor(-Inf), uniq_thresh)),
+    max_constant=torch::torch_cat(list(uniq_thresh, torch::torch_tensor(Inf)))))
 }
 

@@ -1,6 +1,6 @@
 PR_curve <- function(pred_tensor, label_tensor){
   list2env(BaseMetricCalculator()(pred_tensor, label_tensor),
-  envir = environment()) # p_total, n_total, FPR, FNR, uniq_thresh
+  envir = environment())
   TP = p_total * (1 - FNR)
   FP = n_total * FPR
   FN = p_total * FNR
@@ -16,5 +16,5 @@ PR_curve <- function(pred_tensor, label_tensor){
     FNR=FNR,
     FDR=FDR,
     "min(FDR,FNR)"=torch::torch_minimum(FDR, FNR),
-    min_constant=torch::torch_cat(list(torch::torch_tensor(-Inf), uniq_thresh)),
-    max_constant=torch::torch_cat(list(uniq_thresh, torch::torch_tensor(Inf))))}
+    min_constant=min_constant,
+    max_constant=max_constant)}
