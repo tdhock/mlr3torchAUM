@@ -24,11 +24,11 @@ ROC_AUC_macro<-function(pred_tensor,label_tensor){
   fn_diff = -is_positive
   fp_diff = is_negative
   thresh_tensor = -pred_tensor
-  fn_denom = is_positive$sum(dim = 1) # attention: might be 0 for some classes
+  fn_denom = is_positive$sum(dim = 1)
   fp_denom = is_negative$sum(dim = 1)
   sorted_indices = torch::torch_argsort(thresh_tensor, dim = 1)
   sorted_fp_cum = torch::torch_gather(fp_diff, dim=1, index=sorted_indices)$cumsum(1)/fp_denom
-  sorted_fn_cum = -torch::torch_gather(fn_diff, dim=1, index=sorted_indices)$flip(1)$cumsum(1)$flip(1)/fn_denom # attention
+  sorted_fn_cum = -torch::torch_gather(fn_diff, dim=1, index=sorted_indices)$flip(1)$cumsum(1)$flip(1)/fn_denom
   sorted_thresh = torch::torch_gather(thresh_tensor, dim=1, index=sorted_indices)
   device = pred_tensor$device
   zeros_vec=torch::torch_zeros(1,n_class, device=device)
