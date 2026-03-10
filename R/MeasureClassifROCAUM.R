@@ -1,10 +1,14 @@
 ROCAUM <- function(pred_tensor, label_tensor){
   N <- NULL
   ## Above to avoid CRAN NOTE.
-  list2env(BaseMetricCalculator(function(is_positive){
+  metrics_result <- BaseMetricCalculator(function(is_positive){
       if(all(as.logical(is_positive)) || all(as.logical(!is_positive))){
         return(torch::torch_sum(label_tensor*0))}
-  })(pred_tensor, label_tensor),envir = environment())
+  })(pred_tensor, label_tensor)
+  FPR <- metrics_result$FPR
+  FNR <- metrics_result$FNR
+  min_constant <- metrics_result$min_constant
+  max_constant <- metrics_result$max_constant
   roc = list(
     FPR=FPR,
     FNR=FNR,

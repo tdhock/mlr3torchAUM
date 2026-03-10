@@ -28,8 +28,13 @@
 #' @export
 
 PR_curve <- function(pred_tensor, label_tensor){
-  list2env(BaseMetricCalculator()(pred_tensor, label_tensor),
-  envir = environment())
+  metrics_result <- BaseMetricCalculator()(pred_tensor, label_tensor)
+  p_total <- metrics_result$p_total
+  n_total <- metrics_result$n_total
+  FPR <- metrics_result$FPR
+  FNR <- metrics_result$FNR
+  min_constant <- metrics_result$min_constant
+  max_constant <- metrics_result$max_constant
   TP = p_total * (1 - FNR)
   FP = n_total * FPR
   FN = p_total * FNR
