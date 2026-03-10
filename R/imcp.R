@@ -1,21 +1,21 @@
-mcp_curve<-function(y_true,y_score,num_classes,abs_tolerance=1e-5) {
+mcp_curve<-function(y_true,y_score,abs_tolerance=1e-5) {
   y_true<-y_true$flatten()
   .validate_inputs(y_true,y_score,abs_tolerance)
-  y_true_score<-torch::nnf_one_hot(y_true,num_classes=num_classes)[,1]
+  y_true_score<-torch::nnf_one_hot(y_true)[,1]
   curve_y<-.get_y_values(y_true,y_true_score,y_score)$curve_y
   n<-curve_y$numel()
   curve_x<-torch::torch_linspace(0,1,steps=n)
   list(curve_x=curve_x,curve_y=curve_y)
 }
 
-imcp_curve<-function(y_true,y_score,num_classes,abs_tolerance=1e-5) {
+imcp_curve<-function(y_true,y_score,abs_tolerance=1e-5) {
   y_true<-y_true$flatten()
   .validate_inputs(y_true,y_score,abs_tolerance)
-  y_true_score<-torch::nnf_one_hot(y_true,num_classes=num_classes)
+  y_true_score<-torch::nnf_one_hot(y_true)
   result<-.get_y_values(y_true,y_true_score,y_score)
   curve_y<-result$curve_y
   sort_indices<-result$sort_indices
-  class_widths<-.get_class_widths(y_true_score,num_classes)
+  class_widths<-.get_class_widths(y_true_score)
   class_widths_per_sample<-class_widths[y_true]
   curve_x<-class_widths_per_sample[sort_indices]
   curve_x<-torch::torch_cumsum(curve_x,dim=1)-(curve_x/2)
@@ -32,13 +32,13 @@ imcp_curve<-function(y_true,y_score,num_classes,abs_tolerance=1e-5) {
   list(curve_x=curve_x,curve_y=curve_y)
 }
 
-mcp_score<-function(y_true,y_score,num_classes,abs_tolerance=1e-5) {
-  curves<-mcp_curve(y_true,y_score,num_classes,abs_tolerance=abs_tolerance)
+mcp_score<-function(y_true,y_score,abs_tolerance=1e-5) {
+  curves<-mcp_curve(y_true,y_score,abs_tolerance=abs_tolerance)
   as.numeric(torch::torch_trapz(curves$curve_y,x=curves$curve_x))
 }
 
-imcp_score<-function(y_true,y_score,num_classes,abs_tolerance=1e-5) {
-  curves<-imcp_curve(y_true,y_score,num_classes,abs_tolerance=abs_tolerance)
+imcp_score<-function(y_true,y_score,abs_tolerance=1e-5) {
+  curves<-imcp_curve(y_true,y_score,abs_tolerance=abs_tolerance)
   as.numeric(torch::torch_trapz(curves$curve_y,x=curves$curve_x))
 }
 
@@ -55,9 +55,9 @@ imcp_score<-function(y_true,y_score,num_classes,abs_tolerance=1e-5) {
   list(curve_y=curve_y,sort_indices=sort_indices)
 }
 
-.get_class_widths<-function(y_true_score,num_classes) {
+.get_class_widths<-function(y_true_score) {
   class_widths<-torch::torch_sum(y_true_score,dim=1)
-  1.0/(num_classes*class_widths)
+  1.0/(y_true_score$shape[2]*class_widths)
 }
 
 .validate_inputs<-function(y_true,y_score,abs_tolerance) {
