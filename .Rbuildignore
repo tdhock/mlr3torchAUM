@@ -1,3 +1,6 @@
-README.org
+README.md
 build.sh
 .github
+^site$
+^private$
+^team-template$

@@ -1,1 +1,16 @@
 *~
+*__files/
+site/doc
+site/manual
+site/*html
+
+# private tooling & secrets -- never commit
+/private/
+/team-template/
+.env
+
+# R / system junk
+.Rproj.user/
+.Rhistory
+.RData
+.DS_Store

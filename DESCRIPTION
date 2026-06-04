@@ -25,5 +25,6 @@ Suggests:
     knitr, markdown,
     mlr3torch,
     ggplot2,
-    future, future.apply
+    future, future.apply,
+    litedown
 VignetteBuilder: knitr
