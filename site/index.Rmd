@@ -26,7 +26,12 @@ if (file.exists(readme <- file.path(pkg_path, 'README.md'))) {
   x = xfun::read_utf8(readme)
   i = which(x == '<!-- badges: start -->')
   # remove lines before badges since they usually contain duplicated info (e.g., title)
-  if (length(i)) x = x[-seq_len(i[1] - 1)]
+  if (length(i)) x = x[-seq_len(i[1] - 1)] else {
+    # no badges: drop the leading '# title' heading (duplicated, and a level-1
+    # heading would demote the appendix heading from the top level)
+    h = grep('^# ', x)
+    if (length(h)) x = x[-h[1]]
+  }
   xfun::raw_string(x)
 }
 ```
