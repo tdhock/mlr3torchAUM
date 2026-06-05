@@ -1,3 +1,4 @@
+if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
 test_that("macro_auc: basic properties and small known cases", {
   skip_on_cran()
 
@@ -58,3 +59,4 @@ test_that("macro_aum: basic properties and small known cases", {
   expect_equal(aum_pkg, 0, tolerance = 1e-6)
 
 })
+}
