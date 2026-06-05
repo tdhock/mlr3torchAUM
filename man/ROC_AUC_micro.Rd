@@ -11,7 +11,7 @@ ROC_AUC_micro(pred_tensor, label_tensor)
 \item{label_tensor}{true labels , tensor of length N}
 }
 \value{
-ROC AUC macro averaged
+ROC AUC micro averaged
 }
 \description{
 This function computes the multi class ROC AUC using OvR approach and micro
