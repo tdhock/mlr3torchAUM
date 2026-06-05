@@ -52,7 +52,7 @@ test_that("macro_aum: basic properties and small known cases", {
   )
   pred <- torch::torch_tensor(P, dtype = torch::torch_float())
 
-  aum_pkg <- ROC_AUM_macro(pred, labels)$item()
+  aum_pkg <- ROC_AUM_micro(pred, labels)$item()
 
   expect_true(is.numeric(aum_pkg))
   expect_equal(aum_pkg, 0, tolerance = 1e-6)
