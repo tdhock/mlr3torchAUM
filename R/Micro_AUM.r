@@ -1,23 +1,3 @@
-#' Compute multi-class ROC AUM micro averaged
-#'
-#' This function computes the multi class ROC AUM using OvR approach and micro
-#' averaging. It assumes that all the inputs are torch tensors and labels are
-#' in [1,K] with K being the number of classes.
-#'
-#' @param pred_tensor output of the model assuming it is of dimension NxK
-#'  (or Nx1 for binary classification)
-#' @param label_tensor true labels , tensor of length N
-#' @param counts (optional) the counts of each class , tensor of length K,
-#' used to compute weighted ROC AUM micro.
-#' @return ROC AUM micro averaged
-#'
-#' @examplesIf torch::torch_is_installed()
-#' \dontrun{
-#' # Small example with 3 classes and 10 samples
-#' labels = torch::torch_randint(1, 4, size = 10, dtype = torch::torch_long())
-#' Draw_ROC_curve_micro(torch::torch_randn(c(10, 3)), labels)
-#' }
-#' @export
 ROC_AUM_micro<-function(pred_tensor,label_tensor,counts=NULL){
   if ((pred_tensor$ndim)==1  ) {
     pred_tensor2 <- torch::torch_stack(
