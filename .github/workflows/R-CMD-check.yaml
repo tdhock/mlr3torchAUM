@@ -42,6 +42,7 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
+          cache-version: torch-${{ matrix.config.torch }}
   
       - name: Install torch
         if: ${{ matrix.config.torch }}
