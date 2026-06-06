@@ -1,7 +1,7 @@
 # mlr3torchAUM
 
-[[https://github.com/mlr3-imbalanced/mlr3torchAUM/actions/workflows/R-CMD-check.yaml][https://github.com/mlr3-imbalanced/mlr3torchAUM/actions/workflows/R-CMD-check.yaml/badge.svg?branch=maum-cran]]
-[[https://app.codecov.io/gh/mlr3-imbalanced/mlr3torchAUM][https://codecov.io/gh/mlr3-imbalanced/mlr3torchAUM/branch/maum-cran/graph/badge.svg]]
+[![R-CMD-check](https://github.com/mlr3-imbalanced/mlr3torchAUM/actions/workflows/R-CMD-check.yaml/badge.svg?branch=maum-cran)](https://github.com/mlr3-imbalanced/mlr3torchAUM/actions/workflows/R-CMD-check.yaml)
+[![codecov](https://codecov.io/gh/mlr3-imbalanced/mlr3torchAUM/branch/maum-cran/graph/badge.svg)](https://app.codecov.io/gh/mlr3-imbalanced/mlr3torchAUM)
 
 
 Learning with Area Under the Minimum in the mlr3torch framework
