@@ -24,6 +24,6 @@ Suggests:
     testthat,
     knitr, markdown,
     mlr3torch,
-    future, future.apply
+    future, future.apply,
     litedown
 VignetteBuilder: knitr
