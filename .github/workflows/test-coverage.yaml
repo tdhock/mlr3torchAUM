@@ -2,7 +2,7 @@
 # Test coverage -> Codecov.
 on:
   push:
-    branches: [main, master, maum-cran]
+    branches: [main, master]
   pull_request:
     branches: [main, master]
 
