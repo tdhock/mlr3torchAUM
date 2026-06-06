@@ -25,4 +25,5 @@ Suggests:
     knitr, markdown,
     mlr3torch,
     future, future.apply
+    litedown
 VignetteBuilder: knitr
