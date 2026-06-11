@@ -15,6 +15,3 @@ site/*html
 .RData
 .DS_Store
 *.ipynb
-
-# data
-data/
