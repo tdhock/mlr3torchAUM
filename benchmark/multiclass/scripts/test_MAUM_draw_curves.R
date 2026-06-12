@@ -48,6 +48,8 @@ for (data.file in c("test_results.csv", "test_imbalanced_class_probs.csv")) {
         gg.macro, width = 7, height = 5, dpi = 120)
 }
 
+sessionInfo() # need after plotting
+
 trapezoid_auc <- function(fpr, tpr) sum(diff(fpr)*(tpr[-1]+tpr[-length(fpr)])/2)
 
 test_that("test_imbalanced_class_probs matches expected data shape", {
