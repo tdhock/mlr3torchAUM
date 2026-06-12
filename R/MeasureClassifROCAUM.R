@@ -16,20 +16,21 @@ ROCAUM <- function(pred_tensor, label_tensor){
   sorted_fn_cum = -fn_diff[sorted_indices]$flip(1)$cumsum(dim=1)$flip(1)/fn_denom
   sorted_thresh = thresh_tensor[sorted_indices]
   sorted_is_diff = sorted_thresh$diff() != 0
-  sorted_fp_end = torch::torch_cat(c(sorted_is_diff, torch::torch_tensor(TRUE)))
-  sorted_fn_end = torch::torch_cat(c(torch::torch_tensor(TRUE), sorted_is_diff))
+  dev = pred_tensor$device
+  sorted_fp_end = torch::torch_cat(c(sorted_is_diff, torch::torch_tensor(TRUE, device=dev)))
+  sorted_fn_end = torch::torch_cat(c(torch::torch_tensor(TRUE, device=dev), sorted_is_diff))
   uniq_thresh = sorted_thresh[sorted_fp_end]
   uniq_fp_after = sorted_fp_cum[sorted_fp_end]
   uniq_fn_before = sorted_fn_cum[sorted_fn_end]
-  FPR = torch::torch_cat(c(torch::torch_tensor(0.0), uniq_fp_after))
-  FNR = torch::torch_cat(c(uniq_fn_before, torch::torch_tensor(0.0)))
+  FPR = torch::torch_cat(c(torch::torch_tensor(0.0, device=dev), uniq_fp_after))
+  FNR = torch::torch_cat(c(uniq_fn_before, torch::torch_tensor(0.0, device=dev)))
   roc = list(
     FPR=FPR,
     FNR=FNR,
     TPR=1 - FNR,
     "min(FPR,FNR)"=torch::torch_minimum(FPR, FNR),
-    min_constant=torch::torch_cat(c(torch::torch_tensor(-Inf), uniq_thresh)),
-    max_constant=torch::torch_cat(c(uniq_thresh, torch::torch_tensor(Inf))))
+    min_constant=torch::torch_cat(c(torch::torch_tensor(-Inf, device=dev), uniq_thresh)),
+    max_constant=torch::torch_cat(c(uniq_thresh, torch::torch_tensor(Inf, device=dev))))
   min_FPR_FNR = roc[["min(FPR,FNR)"]][2:-2]
   constant_diff = roc$min_constant[2:N]$diff()
   torch::torch_sum(min_FPR_FNR * constant_diff)
