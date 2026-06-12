@@ -39,7 +39,7 @@ data_list <- list()
 # Draw the pictures and save to fig.dir
 for (data.file in c("test_results.csv", "test_imbalanced_class_probs.csv")) {
     probs <- read_probs(data.file)
-    data_list[[data.file]] <- read_probs(data.file)
+    data_list[[data.file]] <- probs
     gg.micro <- Draw_ROC_curve_micro(probs$pred_tensor, probs$label_tensor)
     gg.macro <- Draw_ROC_curve_macro(probs$pred_tensor, probs$label_tensor)
     ggsave(file.path(fig.dir, paste0(data.file, "_ROC_micro.png")),
@@ -72,7 +72,7 @@ test_that("micro ROC curves match its mathematical properties", {
 })
 
 test_that("micro AUC agrees with mlr3measures::auc",{
-    probs <- read_probs("test_imbalanced_class_probs.csv")
+    probs <- data_list[["test_imbalanced_class_probs.csv"]]
     gg <- Draw_ROC_curve_micro(probs$pred_tensor, probs$label_tensor)
     curve <- data.table(gg$data)
     area_curve <- trapezoid_auc(curve$FPR, curve$TPR)
