@@ -1,25 +1,29 @@
-test_that("trapz calculates trapezoid area", {
-  expect_equal(trapz(c(0, 1), c(1, 1)), 1)
-  expect_equal(trapz(c(0, 1), c(0, 1)), 0.5)
-  expect_equal(trapz(c(0, 1, 2), c(0, 1, 0)), 1)
+test_that("trapz (torch) calculates trapezoid area", {
+  expect_equal(trapz(torch::torch_tensor(c(0, 1)),
+  torch::torch_tensor(c(1, 1)))$item(), 1, tolerance = 1e-6)
+  expect_equal(trapz(torch::torch_tensor(c(0, 1)),
+  torch::torch_tensor(c(0, 1)))$item(), 0.5, tolerance = 1e-6)
+  expect_equal(trapz(torch::torch_tensor(c(0, 1, 2)),
+  torch::torch_tensor(c(0, 1, 0)))$item(), 1, tolerance = 1e-6)
 })
 
-test_that("get_y_values: Hellinger score and sort (according to python code)", {
-  y_true <- c(0, 0, 1, 2)
-  y_true_score <- rbind(
-    c(1, 0, 0),
-    c(1, 0, 0),
-    c(0, 1, 0),
-    c(0, 0, 1)
-  )
-  y_score <- rbind(
+test_that("get_y_values (torch): Hellinger score and sort", {
+  pred_tensor <- torch::torch_tensor(rbind(
     c(0.7, 0.2, 0.1),
     c(0.3, 0.4, 0.3),
     c(0.2, 0.6, 0.2),
     c(0.1, 0.3, 0.6)
-  )
-  res <- get_y_values(y_true, y_true_score, y_score)
-  expect_equal(res$curve_y,
+  ))
+  one_hot_tensor <- torch::torch_tensor(rbind(
+    c(1, 0, 0),
+    c(1, 0, 0),
+    c(0, 1, 0),
+    c(0, 0, 1)
+  ))
+  label_tensor <- torch::torch_tensor(c(1L, 1L, 2L, 3L),
+  dtype = torch::torch_long())
+  res <- get_y_values(pred_tensor, one_hot_tensor, label_tensor)
+  expect_equal(torch::as_array(res$curve_y),
                c(0.327484, 0.525233, 0.525233, 0.595847),
                tolerance = 1e-5)
   expect_equal(res$sort_indices, c(2, 3, 4, 1))
@@ -73,7 +77,7 @@ test_that("mcp_curve / mcp_score match python code", {
   expect_equal(cur$curve_x, c(0, 1/3, 2/3, 1), tolerance = 1e-5)
   expect_equal(cur$curve_y, c(0.327484, 0.525233, 0.525233, 0.595847),
                tolerance = 1e-5)
-  expect_equal(mcp_score(y_true, y_score), 0.504044, tolerance = 1e-5)
+  expect_equal(mcp_score(y_true, y_score)$item(), 0.504044, tolerance = 1e-5)
 
   # 1. Error case 1: samples number does not match in y_true
   expect_error(mcp_curve(c(0, 0, 1), y_score), "sample")
@@ -110,5 +114,5 @@ test_that("imcp_curve / imcp_score matched Python code", {
   expect_equal(cur$curve_y,
                c(0.327484, 0.327484, 0.525233, 0.525233, 0.595847, 0.595847),
                tolerance = 1e-5)
-  expect_equal(imcp_score(y_true, y_score), 0.498747, tolerance = 1e-5)
+  expect_equal(imcp_score(y_true, y_score)$item(), 0.498747, tolerance = 1e-5)
 })

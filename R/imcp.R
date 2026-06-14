@@ -1,5 +1,7 @@
-trapz <- function(x, y) {
-    sum((y[-1] + y[-length(y)]) * diff(x) / 2)
+trapz <- function(x_tensor, y_tensor) {
+    length_y <- y_tensor$size(1)
+    sum((y_tensor[2:length_y] + y_tensor[1:(length_y-1)]) * 
+    torch::torch_diff(x_tensor) / 2)
 }
 
 get_y_values <- function(y_true, y_true_score_one_hot, y_score) {
@@ -7,6 +9,16 @@ get_y_values <- function(y_true, y_true_score_one_hot, y_score) {
         rowSums((y_true_score_one_hot - sqrt(y_score))^2))/sqrt(2)
     curve_y <- 1 - hellinger_distance
     ord <- order(curve_y, y_true)
+    return(list(curve_y = curve_y[ord], sort_indices = ord))
+}
+
+get_y_values <- function(
+    pred_tensor,y_true_one_hot_tensor, label_tensor) {
+    hellinger_distance <- torch::torch_sqrt(
+        ((y_true_one_hot_tensor - torch::torch_sqrt(pred_tensor))^2)$sum(2)) / sqrt(2)
+    curve_y <- 1 - hellinger_distance
+    ord <- order(torch::as_array(curve_y),
+    torch::as_array(label_tensor)) #TODO(wei) research on
     return(list(curve_y = curve_y[ord], sort_indices = ord))
 }
 
@@ -37,11 +49,15 @@ prepare_curve <- function(y_true, y_score, labels, abs_tolerance) {
     class_label_mapping <- map_class_labels(y_true, y_score, labels)
     y_true_score_one_hot <- diag(class_label_mapping$y_true_size)[
         class_label_mapping$y_true_int_encoded,]
-    y_values <- get_y_values(y_true, y_true_score_one_hot, y_score)
+    y_values <- get_y_values(
+        torch::torch_tensor(y_score),
+        torch::torch_tensor(y_true_score_one_hot),
+        torch::torch_tensor(class_label_mapping$y_true_int_encoded,
+                            dtype = torch::torch_long()))
     return(list(n_samples=n_samples,
     class_label_mapping=class_label_mapping,
     y_true_score_one_hot=y_true_score_one_hot,
-    curve_y=y_values$curve_y,
+    curve_y=torch::as_array(y_values$curve_y),
     sort_indices=y_values$sort_indices))
 }
 
@@ -55,7 +71,8 @@ mcp_curve <- function(y_true, y_score, labels = NULL, abs_tolerance = 1e-8) {
 
 mcp_score <- function(y_true, y_score, labels = NULL, abs_tolerance = 1e-8) {
     cur <- mcp_curve(y_true, y_score, labels, abs_tolerance)
-    return(trapz(cur$curve_x, cur$curve_y))
+    return(trapz(torch::torch_tensor(cur$curve_x),
+    torch::torch_tensor(cur$curve_y)))
 }
 
 get_class_widths <- function(y_true_score_one_hot, y_true_size) {
@@ -81,5 +98,6 @@ imcp_curve <- function(y_true, y_score, labels = NULL, abs_tolerance = 1e-8) {
 
 imcp_score <- function(y_true, y_score, labels = NULL, abs_tolerance = 1e-8) {
     cur <- imcp_curve(y_true, y_score, labels, abs_tolerance)
-    return(trapz(cur$curve_x, cur$curve_y))
+    return(trapz(torch::torch_tensor(cur$curve_x),
+    torch::torch_tensor(cur$curve_y)))
 }
