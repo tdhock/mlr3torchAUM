@@ -94,3 +94,21 @@ test_that("get_class_widths: adjust widths of single sample", {
   w <- get_class_widths(y_true_score_one_hot, 3)
   expect_equal(w, c(0.166667, 0.333333, 0.333333), tolerance = 1e-5)
 })
+
+test_that("imcp_curve / imcp_score matched Python code", {
+  y_true <- c(0, 0, 1, 2)
+  y_score <- rbind(
+    c(0.7, 0.2, 0.1),
+    c(0.3, 0.4, 0.3),
+    c(0.2, 0.6, 0.2),
+    c(0.1, 0.3, 0.6)
+  )
+  cur <- imcp_curve(y_true, y_score)
+  expect_equal(cur$curve_x,
+               c(0, 0.083333, 0.333333, 0.666667, 0.916667, 1),
+               tolerance = 1e-5)
+  expect_equal(cur$curve_y,
+               c(0.327484, 0.327484, 0.525233, 0.525233, 0.595847, 0.595847),
+               tolerance = 1e-5)
+  expect_equal(imcp_score(y_true, y_score), 0.498747, tolerance = 1e-5)
+})
