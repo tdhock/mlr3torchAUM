@@ -76,5 +76,11 @@ if(torch::torch_is_installed()){
     expect_equal(torch::as_array(loss_fn$all_one_class), 1L)
     expect_equal(torch::as_array(loss_fn$zeros), 1L)
   })
+
+  test_that("sq_hinge_loglinear dictionary retrieval works", {
+    skip_if_not_installed("mlr3torch")
+    expect_true("sq_hinge_loglinear" %in% mlr3torch::mlr3torch_losses$keys())
+    expect_true("TorchLoss" %in% class(mlr3torch::t_loss("sq_hinge_loglinear")))
+  })
   
 }

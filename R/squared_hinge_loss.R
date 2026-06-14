@@ -6,11 +6,6 @@ SquaredHingeLoss <- function(pred_tensor, label_tensor, margin=1){
   y = label_tensor$flatten()
   is_positive = y == 1
   is_negative = !is_positive
-  has_only_pos <- (is_positive$all())$item()
-  has_only_neg <- (is_negative$all())$item()
-  if (isTRUE(has_only_pos) || isTRUE(has_only_neg)) {
-    return(torch::torch_sum(yhat * 0))
-  }
   v = yhat + is_negative$to(dtype=yhat$dtype) * margin
   s = torch::torch_argsort(v)
   yhat_s = yhat[s]
@@ -46,3 +41,14 @@ nn_squared_hinge_loss <- torch::nn_module(
     loss_tensor
   }
 )
+
+torch_loss_sq_hinge_loglinear <- function() {
+  mlr3torch::TorchLoss$new(
+    torch_loss = nn_squared_hinge_loss,
+    task_types = "classif",
+    id = "sq_hinge_loglinear",
+    label = "Log-linear squared hinge loss",
+    packages = "mlr3torchAUM",
+    man = "mlr3torchAUM::nn_squared_hinge_loss"
+  )
+}

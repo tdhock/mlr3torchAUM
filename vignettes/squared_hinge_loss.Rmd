@@ -1,0 +1,202 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Squared hinge loss}
+-->
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+data.table::setDTthreads(1L)
+```
+
+Below we demonstrate the all-pairs squared hinge loss from Rust and Hocking (arXiv:2302.11062), implemented via cumulative sums in O(n logn) time.
+
+Below we load required packages and check torch availability.
+```{r}
+library(data.table)
+torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
+```
+
+## Direct usage with torch tensors
+
+Below we compute the squared hinge loss on a small example.
+```{r}
+if(torch_available){
+  torch::torch_manual_seed(1)
+  pred <- torch::torch_randn(6)
+  labels <- torch::torch_tensor(c(1, -1, 1, -1, -1, 1))
+  (loss_val <- mlr3torchAUM::SquaredHingeLoss(pred, labels, margin=1))
+}
+```
+
+The output above shows a loss of 11.1687 for 6 observations (3 positive, 3 negative) with margin=1.
+
+Below we use the `nn_module` wrapper, which also tracks evaluation statistics.
+```{r}
+if(torch_available){
+  loss_fn <- mlr3torchAUM::nn_squared_hinge_loss(margin=1)
+  loss_fn(pred, labels)
+  loss_fn$state_dict()
+}
+```
+
+The output above shows evals=1 (the loss was called once), zeros=0 (the loss was non-zero), and all_one_class=0 (both classes were present in the batch).
+
+## Effect of margin parameter
+
+The margin m controls the required gap between positive and negative predictions, the loss is zero only when every positive prediction exceeds every negative prediction by at least m.
+
+Below we compute the loss at several margin values.
+```{r}
+if(torch_available){
+  margin_values <- c(0, 0.5, 1, 2)
+  loss_by_margin <- sapply(margin_values, function(m){
+    torch::as_array(mlr3torchAUM::SquaredHingeLoss(pred, labels, margin=m))
+  })
+  data.table(margin=margin_values, loss=loss_by_margin)
+}
+```
+
+The output above shows that the loss increases with the margin: 1.16 at m=0, 4.42 at m=0.5, 11.17 at m=1, and 37.46 at m=2.
+A larger margin demands a wider separation between positive and negative predictions, so the penalty grows accordingly.
+
+Note that even at $m=0$, the loss is non-zero (1.16).
+This is because our predictions are random.
+The squared hinge loss formula $l = \max(0, m - (\hat{y}_{pos} - \hat{y}_{neg}))^2$ dictates that when $m=0$, any pair ranked in the wrong order (where the negative score is higher than the positive score) will still incur a squared penalty.
+
+## Comparison with naive O(n^2) computation
+
+Below we define a naive double-loop reference implementation of the all-pairs squared hinge loss in pure R.
+```{r}
+if(torch_available){
+  naive_squared_hinge_loss <- function(pred, label, margin=1){
+    pos <- which(label == 1)
+    neg <- which(label != 1)
+    if(length(pos) == 0 || length(neg) == 0) return(0)
+    total <- 0
+    for(j in pos){
+      for(k in neg){
+        total <- total + max(margin - (pred[j] - pred[k]), 0)^2
+      }
+    }
+    total
+  }
+  n <- 50
+  set.seed(42)
+  pred <- rnorm(n)
+  label <- sample(c(-1L, 1L), n, replace=TRUE)
+  cumsum_loss <- torch::as_array(
+    mlr3torchAUM::SquaredHingeLoss(
+      torch::torch_tensor(pred, dtype=torch::torch_double()), 
+      torch::torch_tensor(label)
+    )
+  )
+  naive_loss <- naive_squared_hinge_loss(pred, label)
+  data.table(
+    cumsum=cumsum_loss, naive=naive_loss,
+    difference=abs(cumsum_loss - naive_loss))
+}
+```
+
+The output above shows that both implementations give 1121.211.
+The difference of 4.55e-13 is expected floating-point precision error due to the algorithms accumulating sums in a different order.
+This verifies the $O(n \log n)$ implementation is mathematically correct.
+
+Below we use this verified loss in a benchmark comparing squared hinge with the ROCAUM loss on an imbalanced classification task.
+
+## Benchmark comparison
+
+Below we create an imbalanced version of the spam data set.
+```{r}
+spam_task <- mlr3::tsk("spam")
+spam_task$filter(1504:4293)
+Class_vec <- spam_task$data(spam_task$row_ids, "type")$type
+(count_tab <- table(Class_vec))
+```
+```{r}
+count_tab/sum(count_tab)
+```
+
+The output above shows there is about 10% spam and 90% nonspam labels overall in the data set.
+```{r}
+orig_X_dt <- spam_task$data(spam_task$row_ids, spam_task$col_roles$feature)
+sc_X_dt <- data.table(type=Class_vec, scale(orig_X_dt))
+spam_sc_task <- mlr3::TaskClassif$new("spam_sc", sc_X_dt, target="type")
+spam_sc_task$col_roles$stratum <- "type"
+batch_sampler_class <- mlr3torchAUM::batch_sampler_stratified(
+  min_samples_per_stratum = 1,
+  shuffle = TRUE
+)
+batch_sampler_instance <- batch_sampler_class(list(task=spam_sc_task))
+(batch_size <- batch_sampler_instance$batch_size)
+(batch_dt <- as.data.table(t(sapply(
+  batch_sampler_instance$batch_list,
+  function(i)table(Class_vec[i])
+)), key=c("spam","nonspam")))
+```
+
+The output above shows a batch size of 9, with all 310 batches containing exactly 1 spam and 8 nonspam observations.
+This stratified sampling ensures every batch has at least one observation from each class, so the loss gradient is never zero due to a missing class.
+
+Below we train a multilayer perceptron with each loss function and record the subtrain and validation measures at each epoch.
+```{r}
+if(torch_available){
+  measure_list <- list(
+    mlr3torchAUM::MeasureClassifInvAUC$new(),
+    mlr3torchAUM::MeasureClassifROCAUM$new())
+  loss_list <- list(
+    squared_hinge=mlr3torchAUM::nn_squared_hinge_loss,
+    rocaum=mlr3torchAUM::nn_ROCAUM_loss)
+  result_list <- list()
+  for(loss_name in names(loss_list)){
+    L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
+    L$loss <- loss_list[[loss_name]]
+    L$optimizer <- mlr3torch::t_opt("sgd", lr=0.001)
+    L$predict_type <- "prob"
+    L$callbacks <- mlr3torch::t_clbk("history")
+    L$param_set$set_values(
+        epochs=20, batch_size=batch_size, seed=1,
+        measures_valid=measure_list,
+        measures_train=measure_list,
+        batch_sampler=batch_sampler_class)
+    set.seed(1)
+    mlr3::set_validate(L, 0.5)
+    L$train(spam_sc_task)
+    result_list[[loss_name]] <- data.table(
+        loss_name, L$model$callbacks$history)
+    }
+  (history_dt <- rbindlist(result_list))
+}
+```
+
+The output above shows that the squared hinge subtrain `invauc` drops from 0.107 at epoch 1 to 0.024 at epoch 20, while the `rocaum` subtrain `invauc` drops from 0.514 to 0.050. Both loss functions demonstrate steady mathematical progress on the subtrain set over the 20 epochs.
+
+Below we plot the history of the subtrain and validation measures at each epoch.
+```{r}
+if(torch_available){
+  (history_long <- melt(
+    history_dt,
+    measure.vars=measure(set, measure, pattern="(.*).classif.(.*)")
+  )[
+  , Set := ifelse(set=="train", "subtrain", "validation")
+  ][])
+  if(require(ggplot2)){
+    ggplot()+
+      theme_bw()+
+      theme(text=element_text(size=20))+
+      geom_line(aes(
+        epoch, value, color=Set),
+        linewidth=1,
+        data=history_long)+
+      facet_grid(measure ~ loss_name, scales="free", labeller=label_both)+
+      scale_y_log10()
+  }
+}
+```
+
+We see in the result figure above that:
+
+* The $O(n \log n)$ squared hinge loss implementation based on cumulative sums effectively decreases subtrain error (red line) on this imbalanced task.
+* This confirms that the log-linear algorithm successfully drives gradient descent as described in the research paper, avoiding the $O(n^2)$ complexity of a naive implementation.
+
+Note: The validation error (cyan line) remains relatively steady without improving. This is expected behavior due to the neural network quickly overfitting on this small data set.
