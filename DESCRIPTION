@@ -7,7 +7,11 @@ Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
      role=c("aut", "cre"),
-     comment = c(ORCID="0000-0002-3146-0865"))
+     comment = c(ORCID="0000-0002-3146-0865")),
+    person("Wei", "Cao",
+     email="wcao23ubishops.ca",
+     role="aut",
+     comment = c(ORCID="0009-0005-0325-350X"))
   )
 Description: Learning with loss functions based on
  Area Under the Minimum of False Positives and False Negatives
