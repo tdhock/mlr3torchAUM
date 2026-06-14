@@ -12,6 +12,19 @@ get_y_values <- function(y_true, y_true_score, y_score) {
 
 map_class_labels <- function(y_true, y_score, labels = NULL) {
     unique_classes <- sort(unique(y_true))
-    return(list(y_true_size = length(unique_classes),
+    y_true_size <- length(unique_classes)
+    y_score_size <- ncol(y_score)
+    if (y_true_size != y_score_size) {
+        if (is.null(labels)) stop("labels not given")
+        if (length(labels) != y_score_size) stop(
+            "labels length not equal to y_score columns number")
+        if (class(labels) != class(y_true)) stop(
+            "labels type does not match y_true type")
+        if( !all(unique_classes %in% labels)) stop(
+            "y_true classes are not a subset of labels")
+        unique_classes <- sort(labels)
+        y_true_size <- y_score_size
+    }
+    return(list(y_true_size = y_true_size,
     y_true_int_encoded = match(y_true, unique_classes)))
 }
