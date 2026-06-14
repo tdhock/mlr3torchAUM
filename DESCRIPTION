@@ -29,6 +29,8 @@ Suggests:
     testthat,
     knitr, markdown,
     mlr3torch,
+    ggplot2,
+    atime,
     future, future.apply,
     litedown,
     e1071
