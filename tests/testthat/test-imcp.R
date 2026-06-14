@@ -55,8 +55,42 @@ test_that("map_class_labels: check when cols of y_score is not equal to the numb
   expect_equal(res$y_true_size, 3)
   expect_equal(res$y_true_int_encoded, c(1, 1, 2, 2))
 
-  # 6. labels in random order should also get the same result (because internal sort)
+  # 6. labels in random order should also get the same result
   res_shuffled <- map_class_labels(y_true, y_score, labels = c(3, 1, 2))
   expect_equal(res_shuffled$y_true_size, 3)
   expect_equal(res_shuffled$y_true_int_encoded, c(1, 1, 2, 2))
+})
+
+test_that("mcp_curve / mcp_score match python code", {
+  y_true <- c(0, 0, 1, 2)
+  y_score <- rbind(
+    c(0.7, 0.2, 0.1),
+    c(0.3, 0.4, 0.3),
+    c(0.2, 0.6, 0.2),
+    c(0.1, 0.3, 0.6)
+  )
+  cur <- mcp_curve(y_true, y_score)
+  expect_equal(cur$curve_x, c(0, 1/3, 2/3, 1), tolerance = 1e-5)
+  expect_equal(cur$curve_y, c(0.327484, 0.525233, 0.525233, 0.595847),
+               tolerance = 1e-5)
+  expect_equal(mcp_score(y_true, y_score), 0.504044, tolerance = 1e-5)
+
+  # 1. Error case 1: samples number does not match in y_true
+  expect_error(mcp_curve(c(0, 0, 1), y_score), "sample")
+  # 2. Error case 2: some row's probability sum is not 1
+  bad <- y_score
+  bad[1, 1] <- 0.9   # first row probability sum is 1.2
+  expect_error(mcp_curve(y_true, bad), "probabilities sum")
+})
+
+test_that("get_class_widths: adjust widths of single sample", {
+  # y_true = c(0,0,1,2), 3 classes
+  y_true_score_one_hot <- rbind(
+    c(1, 0, 0),
+    c(1, 0, 0),
+    c(0, 1, 0),
+    c(0, 0, 1)
+  )
+  w <- get_class_widths(y_true_score_one_hot, 3)
+  expect_equal(w, c(0.166667, 0.333333, 0.333333), tolerance = 1e-5)
 })
