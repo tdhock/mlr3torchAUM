@@ -14,5 +14,3 @@ site/*html
 .Rhistory
 .RData
 .DS_Store
-
-CLAUDE.md
