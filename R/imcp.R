@@ -110,6 +110,12 @@ MeasureClassifIMCP <- R6Class(
   )
 )
 
+nn_IMCP_loss <- torch::nn_module(
+  c("nn_IMCP_loss", "nn_loss"),
+  forward = function(pred_tensor, label_tensor) {
+    1 - imcp_score(torch::nnf_softmax(pred_tensor, dim = 2), label_tensor)
+  }
+)
 MeasureClassifMCP <- R6Class(
   "MCP",
   inherit = MeasureClassif,
