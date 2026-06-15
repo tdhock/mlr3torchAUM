@@ -19,3 +19,5 @@ site/*html
 /notebooks/
 /python_golden/
 
+*.ipynb
+
