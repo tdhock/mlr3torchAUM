@@ -65,54 +65,60 @@ test_that("map_class_labels: check when cols of y_score is not equal to the numb
   expect_equal(res_shuffled$y_true_int_encoded, c(1, 1, 2, 2))
 })
 
-test_that("mcp_curve / mcp_score match python code", {
-  y_true <- c(0, 0, 1, 2)
-  y_score <- rbind(
+test_that("mcp_curve / mcp_score (torch) match python code", {
+  pred_tensor <- torch::torch_tensor(rbind(
     c(0.7, 0.2, 0.1),
     c(0.3, 0.4, 0.3),
     c(0.2, 0.6, 0.2),
     c(0.1, 0.3, 0.6)
-  )
-  cur <- mcp_curve(y_true, y_score)
-  expect_equal(cur$curve_x, c(0, 1/3, 2/3, 1), tolerance = 1e-5)
-  expect_equal(cur$curve_y, c(0.327484, 0.525233, 0.525233, 0.595847),
-               tolerance = 1e-5)
-  expect_equal(mcp_score(y_true, y_score)$item(), 0.504044, tolerance = 1e-5)
+  ))
+  label_tensor <- torch::torch_tensor(c(1L, 1L, 2L, 3L), dtype = torch::torch_long())
+  cur <- mcp_curve(pred_tensor, label_tensor)
+  expect_equal(torch::as_array(cur$curve_x), c(0, 1/3, 2/3, 1), tolerance = 1e-5)
+  expect_equal(torch::as_array(cur$curve_y),
+               c(0.327484, 0.525233, 0.525233, 0.595847), tolerance = 1e-5)
+  expect_equal(mcp_score(pred_tensor, label_tensor)$item(), 0.504044, tolerance = 1e-5)
 
-  # 1. Error case 1: samples number does not match in y_true
-  expect_error(mcp_curve(c(0, 0, 1), y_score), "sample")
-  # 2. Error case 2: some row's probability sum is not 1
-  bad <- y_score
-  bad[1, 1] <- 0.9   # first row probability sum is 1.2
-  expect_error(mcp_curve(y_true, bad), "probabilities sum")
+  # Error case 1: sample numbers don't match
+  expect_error(mcp_curve(pred_tensor,
+    torch::torch_tensor(c(1L, 1L, 2L), dtype = torch::torch_long())), "sample")
+  # Error case 2/3: certain row's probabilities sum up not to 1
+  bad <- torch::torch_tensor(rbind(
+    c(0.9, 0.2, 0.1), c(0.3, 0.4, 0.3), c(0.2, 0.6, 0.2), c(0.1, 0.3, 0.6)))
+  expect_error(mcp_curve(bad, label_tensor), "probabilities sum")
+  bad_low <- torch::torch_tensor(rbind(
+    c(0.5, 0.2, 0.1), c(0.3, 0.4, 0.3), c(0.2, 0.6, 0.2), c(0.1, 0.3, 0.6)))
+  expect_error(mcp_curve(bad_low, label_tensor), "probabilities sum")
 })
 
 test_that("get_class_widths: adjust widths of single sample", {
   # y_true = c(0,0,1,2), 3 classes
-  y_true_score_one_hot <- rbind(
+  one_hot_tensor <- torch::torch_tensor(rbind(
     c(1, 0, 0),
     c(1, 0, 0),
     c(0, 1, 0),
     c(0, 0, 1)
-  )
-  w <- get_class_widths(y_true_score_one_hot, 3)
-  expect_equal(w, c(0.166667, 0.333333, 0.333333), tolerance = 1e-5)
+  ))
+  w <- get_class_widths(one_hot_tensor, 3)
+  expect_equal(torch::as_array(w), c(0.166667, 0.333333, 0.333333), tolerance = 1e-5)
 })
 
-test_that("imcp_curve / imcp_score matched Python code", {
-  y_true <- c(0, 0, 1, 2)
-  y_score <- rbind(
+test_that("imcp_curve / imcp_score (torch) match python code", {
+  pred_tensor <- torch::torch_tensor(rbind(
     c(0.7, 0.2, 0.1),
     c(0.3, 0.4, 0.3),
     c(0.2, 0.6, 0.2),
     c(0.1, 0.3, 0.6)
-  )
-  cur <- imcp_curve(y_true, y_score)
-  expect_equal(cur$curve_x,
+  ))
+  label_tensor <- torch::torch_tensor(
+    c(1L, 1L, 2L, 3L), dtype = torch::torch_long())
+  cur <- imcp_curve(pred_tensor, label_tensor)
+  expect_equal(torch::as_array(cur$curve_x),
                c(0, 0.083333, 0.333333, 0.666667, 0.916667, 1),
                tolerance = 1e-5)
-  expect_equal(cur$curve_y,
+  expect_equal(torch::as_array(cur$curve_y),
                c(0.327484, 0.327484, 0.525233, 0.525233, 0.595847, 0.595847),
                tolerance = 1e-5)
-  expect_equal(imcp_score(y_true, y_score)$item(), 0.498747, tolerance = 1e-5)
+  expect_equal(imcp_score(pred_tensor, label_tensor)$item(),
+               0.498747, tolerance = 1e-5)
 })
