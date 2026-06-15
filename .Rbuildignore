@@ -7,5 +7,7 @@ build.sh
 ^notebooks$
 ^\.git$
 ^refs$
+^notebooks$
+
 
 
