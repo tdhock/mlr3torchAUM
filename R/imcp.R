@@ -12,7 +12,7 @@ get_y_values <- function(
   ) / sqrt(2)
   curve_y <- 1 - hellinger_distance
   ord <- order(
-    torch::as_array(curve_y),
+    torch::as_array(curve_y$detach()),
     torch::as_array(label_tensor)
   ) # TODO(wei) research on
   return(list(curve_y = curve_y[ord], sort_indices = ord))
@@ -22,7 +22,7 @@ prepare_curve <- function(pred_tensor, label_tensor, abs_tolerance = 1e-6) {
   n_samples <- pred_tensor$size(1)
   n_classes <- pred_tensor$size(2)
   if (n_samples != label_tensor$size(1)) stop("sample numbers don't match")
-  if (any(abs(torch::as_array(pred_tensor$sum(dim = 2) - 1)) > abs_tolerance)) {
+  if (any(abs(torch::as_array(pred_tensor$detach()$sum(dim = 2) - 1)) > abs_tolerance)) {
     stop("Not all rows' probabilities sum to 1")
   }
   y_true_one_hot_tensor <- torch::nnf_one_hot(label_tensor, num_classes = n_classes)
