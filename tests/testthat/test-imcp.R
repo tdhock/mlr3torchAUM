@@ -163,3 +163,20 @@ test_that("nn_IMCP_loss remains on computational graph", {
   expect_true(all(is.finite(as.numeric(pred_tensor$grad))))
 }) 
 }
+
+test_that("nn_IMCP_loss faces confident prediction", {
+  skip_on_cran()
+  pred_tensor <- torch::torch_tensor(rbind(
+    c(6, 2, 256),
+    c(3, 5, 338),
+    c(2, 160, 2),
+    c(10, 4, 4)
+  ), requires_grad=TRUE, 
+  dtype = torch::torch_float32())
+  label_tensor <- torch::torch_tensor(c(3L,3L,2L,1L),
+  dtype = torch::torch_long())
+  loss_fn <- nn_IMCP_loss()
+  loss <- loss_fn(pred_tensor, label_tensor)
+  loss$backward()
+  expect_true(any(is.nan(as.numeric(pred_tensor$grad))))
+}) 
