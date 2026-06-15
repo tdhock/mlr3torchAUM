@@ -6,5 +6,7 @@ build.sh
 ^team-template$
 ^\.git$
 ^refs$
+^notebooks$
+
 
 
