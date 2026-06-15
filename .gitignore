@@ -16,3 +16,4 @@ site/*html
 .DS_Store
 
 *.ipynb
+refs/

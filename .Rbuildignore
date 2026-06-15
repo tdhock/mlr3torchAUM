@@ -5,4 +5,6 @@ build.sh
 ^private$
 ^team-template$
 ^\.git$
+^refs$
+
 
