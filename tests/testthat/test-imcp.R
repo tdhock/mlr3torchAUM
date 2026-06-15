@@ -1,4 +1,7 @@
+if (torch::torch_is_installed()) {
+
 test_that("trapz (torch) calculates trapezoid area", {
+  skip_on_cran()
   expect_equal(trapz(
     torch::torch_tensor(c(0, 1)),
     torch::torch_tensor(c(1, 1))
@@ -14,6 +17,7 @@ test_that("trapz (torch) calculates trapezoid area", {
 })
 
 test_that("get_y_values (torch): Hellinger score and sort", {
+  skip_on_cran()
   pred_tensor <- torch::torch_tensor(rbind(
     c(0.7, 0.2, 0.1),
     c(0.3, 0.4, 0.3),
@@ -38,6 +42,7 @@ test_that("get_y_values (torch): Hellinger score and sort", {
 })
 
 test_that("mcp_curve / mcp_score (torch) match python code", {
+  skip_on_cran()
   pred_tensor <- torch::torch_tensor(rbind(
     c(0.7, 0.2, 0.1),
     c(0.3, 0.4, 0.3),
@@ -70,6 +75,7 @@ test_that("mcp_curve / mcp_score (torch) match python code", {
 })
 
 test_that("get_class_widths: adjust widths of single sample", {
+  skip_on_cran()
   # y_true = c(0,0,1,2), 3 classes
   one_hot_tensor <- torch::torch_tensor(rbind(
     c(1, 0, 0),
@@ -82,6 +88,7 @@ test_that("get_class_widths: adjust widths of single sample", {
 })
 
 test_that("imcp_curve / imcp_score (torch) match python code", {
+  skip_on_cran()
   pred_tensor <- torch::torch_tensor(rbind(
     c(0.7, 0.2, 0.1),
     c(0.3, 0.4, 0.3),
@@ -108,6 +115,7 @@ test_that("imcp_curve / imcp_score (torch) match python code", {
 })
 
 test_that("classif.imcp measure (registered) matches imcp_score", {
+  skip_on_cran()
   truth <- factor(c("a", "a", "b", "c"), levels = c("a", "b", "c")) # as.integer -> 1,1,2,3
   prob <- matrix(
     c(
@@ -122,6 +130,7 @@ test_that("classif.imcp measure (registered) matches imcp_score", {
 })
 
 test_that("classif.mcp measure (registered) matches mcp_score", {
+  skip_on_cran()
   truth <- factor(c("a", "a", "b", "c"), levels = c("a", "b", "c"))
   prob <- matrix(
     c(
@@ -134,3 +143,5 @@ test_that("classif.mcp measure (registered) matches mcp_score", {
   p <- mlr3::PredictionClassif$new(row_ids = 1:4, truth = truth, prob = prob)
   expect_equal(unname(p$score(mlr3::msr("classif.mcp"))), 0.504044, tolerance = 1e-5)
 })
+
+}

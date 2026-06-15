@@ -21,3 +21,5 @@ site/*html
 
 *.ipynb
 
+refs/
+
