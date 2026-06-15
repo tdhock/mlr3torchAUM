@@ -3,6 +3,8 @@ register_mlr3 = function() {
   ## mlr_resamplings$add("same_other_sizes_cv", ResamplingSameOtherSizesCV)
   mlr3::mlr_measures$add("classif.rocaum", MeasureClassifROCAUM)
   mlr3::mlr_measures$add("classif.invauc", MeasureClassifInvAUC)
+  mlr3::mlr_measures$add("classif.imcp", MeasureClassifIMCP)
+  mlr3::mlr_measures$add("classif.mcp", MeasureClassifMCP)
 }
 
 .onLoad = function(libname, pkgname) { # nolint

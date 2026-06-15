@@ -91,3 +91,25 @@ MeasureClassifIMCP <- R6Class(
             dtype = torch::torch_long())
             torch::as_array(imcp_score(pred_tensor, label_tensor))
     }))
+
+MeasureClassifMCP <- R6Class(
+    "MCP",
+    inherit = MeasureClassif,
+    public = list(
+        initialize = function() {
+                super$initialize(
+                    id = "classif.mcp",
+                    label = "Area Under the Multiclass Classification Performance curve",
+                    packages = "torch",
+                    properties = character(),
+                    task_properties = character(), # multiclass
+                    predict_type = "prob",
+                    range = c(0, 1),
+                    minimize = FALSE)}),
+    private = list(
+        .score = function(prediction, ...) {
+            pred_tensor  <- torch::torch_tensor(prediction$prob)
+            label_tensor <- torch::torch_tensor(as.integer(prediction$truth),
+            dtype = torch::torch_long())
+            torch::as_array(mcp_score(pred_tensor, label_tensor))
+    }))

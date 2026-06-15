@@ -95,5 +95,16 @@ test_that("classif.imcp measure (registered) matches imcp_score", {
       0.1, 0.3, 0.2, 0.6),   # line c
     ncol = 3, dimnames = list(NULL, c("a", "b", "c")))
   p <- mlr3::PredictionClassif$new(row_ids = 1:4, truth = truth, prob = prob)
-  expect_equal(p$score(mlr3::msr("classif.imcp")), 0.498747, tolerance = 1e-5)
+  expect_equal(unname(p$score(mlr3::msr("classif.imcp"))), 0.498747, tolerance = 1e-5)
+})
+
+test_that("classif.mcp measure (registered) matches mcp_score", {
+  truth <- factor(c("a", "a", "b", "c"), levels = c("a", "b", "c"))
+  prob <- matrix(
+    c(0.7, 0.3, 0.2, 0.1,
+      0.2, 0.4, 0.6, 0.3,
+      0.1, 0.3, 0.2, 0.6),
+    ncol = 3, dimnames = list(NULL, c("a", "b", "c")))
+  p <- mlr3::PredictionClassif$new(row_ids = 1:4, truth = truth, prob = prob)
+  expect_equal(unname(p$score(mlr3::msr("classif.mcp"))), 0.504044, tolerance = 1e-5)
 })
