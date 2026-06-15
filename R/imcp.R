@@ -14,25 +14,6 @@ get_y_values <- function(
     return(list(curve_y = curve_y[ord], sort_indices = ord))
 }
 
-map_class_labels <- function(y_true, y_score, labels = NULL) {
-    unique_classes <- sort(unique(y_true))
-    y_true_size <- length(unique_classes)
-    y_score_size <- ncol(y_score)
-    if (y_true_size != y_score_size) {
-        if (is.null(labels)) stop("labels not given")
-        if (length(labels) != y_score_size) stop(
-            "labels length not equal to y_score columns number")
-        if (class(labels) != class(y_true)) stop(
-            "labels type does not match y_true type")
-        if( !all(unique_classes %in% labels)) stop(
-            "y_true classes are not a subset of labels")
-        unique_classes <- sort(labels)
-        y_true_size <- y_score_size
-    }
-    return(list(y_true_size = y_true_size,
-    y_true_int_encoded = match(y_true, unique_classes)))
-}
-
 prepare_curve <- function(pred_tensor, label_tensor, abs_tolerance = 1e-6) {
   n_samples <- pred_tensor$size(1)
   n_classes <- pred_tensor$size(2)
@@ -84,8 +65,29 @@ imcp_curve <- function(pred_tensor, label_tensor, abs_tolerance = 1e-6) {
     return(list(curve_x = curve_x, curve_y = curve_y))
 }
 
-
 imcp_score <- function(pred_tensor, label_tensor, abs_tolerance = 1e-6) {
     cur <- imcp_curve(pred_tensor, label_tensor, abs_tolerance)
     return(trapz(cur$curve_x,cur$curve_y))
 }
+
+MeasureClassifIMCP <- R6Class(
+    "IMCP",
+    inherit = MeasureClassif,
+    public = list(
+        initialize = function() {
+                super$initialize(
+                    id = "classif.imcp",
+                    label = "Area Under the Imbalanced Multiclass Classification Performance curve",
+                    packages = "torch",
+                    properties = character(),
+                    task_properties = character(), # multiclass
+                    predict_type = "prob",
+                    range = c(0, 1),
+                    minimize = FALSE)}),
+    private = list(
+        .score = function(prediction, ...) {
+            pred_tensor  <- torch::torch_tensor(prediction$prob)
+            label_tensor <- torch::torch_tensor(as.integer(prediction$truth),
+            dtype = torch::torch_long())
+            torch::as_array(imcp_score(pred_tensor, label_tensor))
+    }))
