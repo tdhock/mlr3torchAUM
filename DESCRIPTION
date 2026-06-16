@@ -29,7 +29,7 @@ Suggests:
     testthat,
     knitr, markdown,
     mlr3torch,
-    ggplot2,
+    scales,
     atime,
     future, future.apply,
     litedown,
