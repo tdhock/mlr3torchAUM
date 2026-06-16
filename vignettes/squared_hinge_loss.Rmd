@@ -9,7 +9,7 @@ knitr::opts_chunk$set(
 data.table::setDTthreads(1L)
 ```
 
-Below we demonstrate the all-pairs squared hinge loss from Rust and Hocking (arXiv:2302.11062), implemented via cumulative sums in O(n logn) time.
+Below we demonstrate the all-pairs squared hinge loss from Rust and Hocking (arXiv:2302.11062), implemented via cumulative sums in O(n log n) time.
 
 Below we load required packages and check torch availability.
 ```{r}
@@ -139,18 +139,20 @@ if(torch_available && requireNamespace("atime")){
       loss$backward()
     },
     Naive = {
-      p_leaf$grad$zero_()
-      diffs <- p_leaf[is_pos]$unsqueeze(2) - p_leaf[is_neg]$unsqueeze(1)
-      loss <- torch::torch_sum(torch::torch_clamp(1.0 - diffs, min=0)^2)
-      loss$backward()
+      if (N <= 10000) {
+        p_leaf$grad$zero_()
+        diffs <- p_leaf[is_pos]$unsqueeze(2) - p_leaf[is_neg]$unsqueeze(1)
+        loss <- torch::torch_sum(torch::torch_clamp(1.0 - diffs, min=0)^2)
+        loss$backward()
+      }
     }
   )
 
   # At N=31622, the cross-subtraction matrix grows to roughly 1GB.
-  # This exceeds standard CPU cache limits and forces the system to rely on slower RAM,
-  # causing a massive lag spike. Filtering out this memory-bottlenecked outlier
-  # allows atime to correctly map the true O(N^2) theoretical curve.
-  bench_all$measurements <- bench_all$measurements[!(expr.name == "Naive" & median > 1.0)]
+  # This exceeds standard CPU cache and GitHub Actions runner memory limits.
+  # To prevent Out Of Memory (OOM) crashes on CI, we avoid evaluating Naive 
+  # for N > 10000 and filter out those artificial 0-second timings.
+  bench_all$measurements <- bench_all$measurements[!(expr.name == "Naive" & N > 10000)]
   refs <- atime::references_best(bench_all)
   ref.dt <- refs$references[overall.rank == 1]
   ref.dt <- ref.dt[unit == "seconds"]
