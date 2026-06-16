@@ -20,4 +20,5 @@ site/*html
 /python_golden/
 *.ipynb
 refs/
+slides/
 
