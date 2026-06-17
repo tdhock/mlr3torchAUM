@@ -161,7 +161,7 @@ if(torch_available && requireNamespace("atime")){
 }
 ```
 Below we plot the empirical timings and their best-fit asymptotic reference lines.
-```{r, fig.width=10, fig.height=5, fig.align='center', out.width='100%'}
+```{r complexity-plot, fig.width=10, fig.height=5, fig.align='center', out.width='100%', fig.cap=""}
 if(torch_available && requireNamespace("atime")){
   p <- ggplot() +
     geom_ribbon(aes(x = N, ymin = min, ymax = max, fill = expr.name), 
@@ -185,5 +185,6 @@ if(torch_available && requireNamespace("atime")){
 }
 ```
 We see in the result figure above that:
+
 * The naive approach follows an $O(N^2)$ trajectory, confirming it is too slow for large batch sizes.
 * Our Functional squared hinge loss implementation closely follows the $O(N \log N)$ complexity, making it vastly more efficient and nearly as fast as the $O(N)$ logistic loss.
