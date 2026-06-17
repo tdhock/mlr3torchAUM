@@ -114,10 +114,12 @@ if(torch_available && requireNamespace("atime")){
   device <- torch::torch_device("cpu")
   torch::torch_set_num_threads(1L)
   n_seq <- as.integer(10^seq(1, 7, by=0.5))
+  Nmax <- 10000
+  times <- 8
   bench_all <- atime::atime(
     N = n_seq,
     seconds.limit = 1.0,
-    times = 8,
+    times = times,
     setup = {
       pred_t <- torch::torch_randn(N, dtype=torch::torch_float32(), device=device)
       label_t <- torch::torch_tensor(rep(c(-1, 1), length.out=N), dtype=torch::torch_float32(), device=device)
@@ -139,7 +141,7 @@ if(torch_available && requireNamespace("atime")){
       loss$backward()
     },
     Naive = {
-      if (N <= 10000) {
+      if (N <= Nmax) {
         p_leaf$grad$zero_()
         diffs <- p_leaf[is_pos]$unsqueeze(2) - p_leaf[is_neg]$unsqueeze(1)
         loss <- torch::torch_sum(torch::torch_clamp(1.0 - diffs, min=0)^2)
@@ -147,41 +149,43 @@ if(torch_available && requireNamespace("atime")){
       }
     }
   )
-
   # At N=31622, the cross-subtraction matrix grows to roughly 1GB.
   # This exceeds standard CPU cache and GitHub Actions runner memory limits.
   # To prevent Out Of Memory (OOM) crashes on CI, we avoid evaluating Naive 
   # for N > 10000 and filter out those artificial 0-second timings.
-  bench_all$measurements <- bench_all$measurements[!(expr.name == "Naive" & N > 10000)]
-  refs <- atime::references_best(bench_all)
-  ref.dt <- refs$references[overall.rank == 1]
-  ref.dt <- ref.dt[unit == "seconds"]
-  refs$measurements <- refs$measurements[unit == "seconds"]
-  ref_labels <- ref.dt[, .SD[which.max(N)], by = .(unit, expr.name, fun.name)]
+  bench_some <- bench_all
+  bench_some$measurements <- bench_all$measurements[
+    !(expr.name == "Naive" & N > Nmax)]
+  plot(bench_some)
+  refs <- atime::references_best(bench_some)
+  seconds.dt <- refs$meas[unit == "seconds"]
 }
 ```
 Below we plot the empirical timings and their best-fit asymptotic reference lines.
 ```{r complexity-plot, fig.width=10, fig.height=5, fig.align='center', out.width='100%', fig.cap=""}
 if(torch_available && requireNamespace("atime")){
   p <- ggplot() +
-    geom_ribbon(aes(x = N, ymin = min, ymax = max, fill = expr.name), 
-                data = refs$measurements, alpha = 0.2) +
-    geom_line(aes(x = N, y = empirical, color = expr.name), 
-              data = refs$measurements, linewidth = 1) +
-    geom_label(aes(x = N, y = reference, label = fun.name, color = expr.name), 
-               data = ref_labels, hjust = 1, vjust = -0.5, 
-               fill = "white", alpha = 0.8, show.legend = FALSE) +
+    geom_ribbon(aes(
+      x = N, ymin = min, ymax = max, fill = expr.class),
+      data = seconds.dt, alpha = 0.2) +
+    geom_line(aes(
+      x = N, y = empirical, color = expr.class),
+      data = seconds.dt, linewidth = 1) +
     scale_x_log10(
       breaks=10^(1:7),
       labels=scales::trans_format("log10",scales::math_format(10^.x))
     ) +
     scale_y_log10() +
-    ggtitle("Asymptotic Complexity of Implementation") +
-    xlab("Number of labeled examples") +
-    ylab("Time (seconds), median line and min/max band, 8 timings") +
-    theme_bw() +
-    theme(legend.position = "right")
-  print(p)
+    ggtitle("Empirical estimation of asymptotic time complexity") +
+    xlab("N = Number of labeled examples") +
+    ylab(sprintf(
+      "Time (seconds), median line and min/max band, %d timings",
+      times)) +
+    theme_bw()
+  if(requireNamespace("directlabels")){
+    p <- directlabels::direct.label(p, "top.polygons")
+  }
+  p
 }
 ```
 We see in the result figure above that:
