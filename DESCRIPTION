@@ -33,5 +33,6 @@ Suggests:
     atime,
     future, future.apply,
     litedown,
-    e1071
+    e1071,
+    directlabels
 VignetteBuilder: knitr

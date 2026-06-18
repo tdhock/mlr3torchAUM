@@ -7,6 +7,9 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>")
 data.table::setDTthreads(1L)
+loss_val <- 11.1687
+loss_diff <- 4.55e-13
+
 ```
 
 Below we demonstrate the all-pairs squared hinge loss from Rust and Hocking (arXiv:2302.11062), implemented via cumulative sums in O(n log n) time.
