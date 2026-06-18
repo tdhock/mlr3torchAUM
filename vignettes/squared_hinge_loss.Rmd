@@ -25,11 +25,12 @@ if(torch_available){
   torch::torch_manual_seed(1)
   pred <- torch::torch_randn(6)
   labels <- torch::torch_tensor(c(1, -1, 1, -1, -1, 1))
-  (loss_val <- mlr3torchAUM::SquaredHingeLoss(pred, labels, margin=1))
+  (loss_val_tensor <- mlr3torchAUM::SquaredHingeLoss(pred, labels, margin=1))
+  loss_val <- as.numeric(loss_val_tensor)
 }
 ```
 
-The output above shows a loss of 11.1687 for 6 observations (3 positive, 3 negative) with margin=1.
+The output above shows a loss of `r loss_val` for 6 observations (3 positive, 3 negative) with margin=1.
 
 Below we use the `nn_module` wrapper, which also tracks evaluation statistics.
 ```{r}
@@ -92,20 +93,24 @@ if(torch_available){
     )
   )
   naive_loss <- naive_squared_hinge_loss(pred, label)
+  loss_diff <- abs(cumsum_loss - naive_loss)
   data.table(
     cumsum=cumsum_loss, naive=naive_loss,
-    difference=abs(cumsum_loss - naive_loss))
+    difference=loss_diff)
 }
 ```
 
 The output above shows that both implementations give 1121.211.
-The difference of 4.55e-13 is expected floating-point precision error due to the algorithms accumulating sums in a different order.
+The difference of `r sprintf("%.2e", loss_diff)` is expected floating-point precision error due to the algorithms accumulating sums in a different order.
 This verifies the $O(n \log n)$ implementation is mathematically correct.
 
 Below we use this verified loss in a benchmark comparing squared hinge with the ROCAUM loss on an imbalanced classification task.
 ## Benchmark comparison
 
 Below we use the `atime` package to empirically verify the asymptotic time complexity of our $O(N \log N)$ squared hinge loss implementation compared to the naive $O(N^2)$ approach and the standard $O(N)$ logistic loss.
+
+Note that at $N=31,622$, the cross-subtraction matrix inside the naive implementation grows to roughly 1GB, which exceeds standard CPU cache and GitHub Actions runner memory limits.
+To prevent Out Of Memory (OOM) crashes on CI, we avoid evaluating the Naive implementation for $N > 10,000$.
 
 ```{r}
 if(torch_available && requireNamespace("atime")){
@@ -149,10 +154,6 @@ if(torch_available && requireNamespace("atime")){
       }
     }
   )
-  # At N=31622, the cross-subtraction matrix grows to roughly 1GB.
-  # This exceeds standard CPU cache and GitHub Actions runner memory limits.
-  # To prevent Out Of Memory (OOM) crashes on CI, we avoid evaluating Naive 
-  # for N > 10000 and filter out those artificial 0-second timings.
   bench_some <- bench_all
   bench_some$measurements <- bench_all$measurements[
     !(expr.name == "Naive" & N > Nmax)]
