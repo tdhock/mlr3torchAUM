@@ -1,3 +1,12 @@
+safe_sqrt <- function(x) {
+  x_safe <- torch::torch_where(x > 0, x, torch::torch_ones_like(x))
+  return(torch::torch_sqrt(x_safe) * torch::torch_where(
+    x > 0,
+    torch::torch_ones_like(x),
+    torch::torch_zeros_like(x)
+  ))
+}
+
 trapz <- function(x_tensor, y_tensor) {
   length_y <- y_tensor$size(1)
   sum((y_tensor[2:length_y] + y_tensor[1:(length_y - 1)]) *
@@ -7,14 +16,19 @@ trapz <- function(x_tensor, y_tensor) {
 get_y_values <- function(
   pred_tensor, y_true_one_hot_tensor, label_tensor
 ) {
-  hellinger_distance <- torch::torch_sqrt(
-    ((y_true_one_hot_tensor - torch::torch_sqrt(pred_tensor))^2)$sum(2)
-  ) / sqrt(2)
-  curve_y <- 1 - hellinger_distance
+  device <- pred_tensor$device
+  d.type <- pred_tensor$dtype
+  hellinger_distance <- safe_sqrt(
+    ((y_true_one_hot_tensor - safe_sqrt(pred_tensor))^2)$sum(2)
+  ) / sqrt(torch::torch_tensor(2, device = device, dtype = d.type))
+  curve_y <- torch::torch_tensor(
+    1,
+    device = device, dtype = d.type
+  ) - hellinger_distance
   ord <- order(
     torch::as_array(curve_y$detach()),
     torch::as_array(label_tensor)
-  ) # TODO(wei) research on
+  ) # TODO(wei) research on sort on computational graph
   return(list(curve_y = curve_y[ord], sort_indices = ord))
 }
 

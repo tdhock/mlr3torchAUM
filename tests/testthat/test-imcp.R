@@ -178,5 +178,5 @@ test_that("nn_IMCP_loss faces confident prediction", {
   loss_fn <- nn_IMCP_loss()
   loss <- loss_fn(pred_tensor, label_tensor)
   loss$backward()
-  expect_true(any(is.nan(as.numeric(pred_tensor$grad))))
+  expect_true(any(is.finite(as.numeric(pred_tensor$grad))))
 }) 
