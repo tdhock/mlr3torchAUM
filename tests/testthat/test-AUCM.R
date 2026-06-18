@@ -32,4 +32,22 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     # b=0.1: 0.5*((0.1)^2 + (0.5)^2)/4 = 0.0325
     expect_equal(AUCM(pred, label, b = 0.1)$item(), 0.0325, tolerance = 1e-6)
   })
+
+  test_that("Step5: AUCM full v1 forward matches LibAUC", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1)$item(),
+      0.1165625,
+      tolerance = 1e-6
+    )
+    expect_equal(AUCM(pred, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 1)$item(),
+      0.1740625,
+      tolerance = 1e-6
+    )
+    expect_equal(AUCM(pred, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 2)$item(),
+      0.4240625,
+      tolerance = 1e-6
+    )
+  })
 }
