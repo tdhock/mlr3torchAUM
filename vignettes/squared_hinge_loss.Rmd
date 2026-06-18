@@ -177,7 +177,8 @@ if(torch_available && requireNamespace("atime")){
       data = seconds.dt, linewidth = 1) +
     scale_x_log10(
       breaks=10^(1:7),
-      labels=scales::trans_format("log10",scales::math_format(10^.x))
+      labels=scales::trans_format("log10",scales::math_format(10^.x)),
+      limits=c(10,4e7)
     ) +
     scale_y_log10() +
     ggtitle("Empirical estimation of asymptotic time complexity") +
@@ -187,7 +188,7 @@ if(torch_available && requireNamespace("atime")){
       times)) +
     theme_bw()
   if(requireNamespace("directlabels")){
-    p <- directlabels::direct.label(p, "top.polygons")
+    p <- directlabels::direct.label(p, "last.points")
   }
   p
 }
