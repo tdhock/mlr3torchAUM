@@ -80,4 +80,32 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     # alpha > 0 which is problematic!
     expect_gt(as.numeric(loss_fn$alpha$grad), 0)
   })
+
+
+  test_that("Step9: pesg_alpha_step ascends alpha toward (margin+b-a), clamps >= 0", {
+    skip_on_cran()
+    loss_fn <- nn_AUCM_loss(margin = 1)
+    torch::with_no_grad({
+      # target = margin - (0.575-0.25) = 0.675
+      loss_fn$a$fill_(0.575)
+      loss_fn$b$fill_(0.25)
+      loss_fn$alpha$fill_(0)
+    })
+    # one step: (lr=0.1)：0 + 0.1*(2*0.675 - 0) = 0.135
+    pesg_alpha_step(loss_fn, lr = 0.1)
+    expect_equal(loss_fn$alpha$item(), 0.135, tolerance = 1e-6)
+    # multi step: converge to target = 0.675
+    for (i in 1:200) pesg_alpha_step(loss_fn, lr = 0.1)
+    expect_equal(loss_fn$alpha$item(), 0.675, tolerance = 1e-4)
+    # when target is negative, clamp to 0，no penalties
+    loss_fn2 <- nn_AUCM_loss(margin = 0.1)
+    torch::with_no_grad({
+      # target = margin - (1-0) = -0.9
+      loss_fn2$a$fill_(1)
+      loss_fn2$b$fill_(0)
+      loss_fn2$alpha$fill_(0.05)
+    })
+    pesg_alpha_step(loss_fn2, lr = 1)
+    expect_equal(loss_fn2$alpha$item(), 0, tolerance = 1e-6)
+  })
 }
