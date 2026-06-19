@@ -16,3 +16,16 @@ positive_ratio <- function(label_tensor) {
   label_tensor_bool <- label_tensor == 1L
   return(label_tensor_bool$to(torch::torch_float())$mean())
 }
+
+nn_AUCM_loss <- torch::nn_module(
+  "nn_AUCM_loss",
+  initialize = function(margin = 1) {
+    self$a <- torch::nn_parameter(torch::torch_zeros(1))
+    self$b <- torch::nn_parameter(torch::torch_zeros(1))
+    self$alpha <- torch::nn_parameter(torch::torch_zeros(1))
+    self$margin <- margin
+  },
+  forward = function(pred_tensor, label_tensor) {
+    AUCM(pred_tensor, label_tensor, self$a, self$b, self$alpha, self$margin)
+  }
+)
