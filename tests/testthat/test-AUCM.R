@@ -50,4 +50,17 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       tolerance = 1e-6
     )
   })
+  test_that("Step6: nn_AUCM_loss exposes a/b/alpha as trainable parameters", {
+    skip_on_cran()
+    loss_fn <- nn_AUCM_loss()
+    # a/b/alpha are parameters, with initial value of 0
+    expect_equal(loss_fn$a$item(), 0, tolerance = 1e-6)
+    expect_equal(loss_fn$b$item(), 0, tolerance = 1e-6)
+    expect_equal(loss_fn$alpha$item(), 0, tolerance = 1e-6)
+    # margin is just hyperparameter
+    expect_equal(length(loss_fn$parameters), 3)
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(loss_fn(pred, label)$item(), 0.1165625, tolerance = 1e-6)
+  })
 }
