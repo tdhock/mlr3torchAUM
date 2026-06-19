@@ -63,4 +63,21 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     expect_equal(loss_fn(pred, label)$item(), 0.1165625, tolerance = 1e-6)
   })
+
+  test_that("Step7: gradients flow; alpha's grad sign exposes the min-max", {
+    skip_on_cran()
+    loss_fn <- nn_AUCM_loss() # a=b=alpha=0, margin=1
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    loss <- loss_fn(pred, label)
+    expect_true(loss$requires_grad)
+    loss$backward()
+    expect_equal(as.numeric(loss_fn$a$grad), -0.2875, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b$grad), -0.125, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha$grad), 0.3375, tolerance = 1e-6)
+    expect_lt(as.numeric(loss_fn$a$grad), 0)
+    expect_lt(as.numeric(loss_fn$b$grad), 0)
+    # alpha > 0 which is problematic!
+    expect_gt(as.numeric(loss_fn$alpha$grad), 0)
+  })
 }
