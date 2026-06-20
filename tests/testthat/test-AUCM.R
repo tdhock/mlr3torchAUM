@@ -138,7 +138,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
     L$loss <- nn_AUCM_loss
     L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
-    L$callbacks <- make_pesg_callback(lr_ab = 0.05)
+    L$callbacks <- make_pesg_callback(lr = 0.05)
     L$predict_type <- "prob"
     L$param_set$set_values(epochs = 30, batch_size = 32, neurons = 8, shuffle = FALSE, seed = 1)
     L$train(task)
@@ -177,5 +177,38 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
         expect_equal(state$t, 1)
       }
     }
+  })
+
+  test_that("Step14: pesg_step/callback mode='adam' uses Adam for a/b (Route A+)", {
+    skip_on_cran()
+    lf <- nn_AUCM_loss(margin = 1)
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    lf(pred, label)$backward()
+    expect_equal(as.numeric(lf$a$grad), -0.2875, tolerance = 1e-6)
+    expect_equal(as.numeric(lf$b$grad), -0.125, tolerance = 1e-6)
+    st <- pesg_step(lf, lr = 0.1, mode = "adam", state = NULL)
+    expect_equal(lf$a$item(), 0.1, tolerance = 1e-6) # first step: lr*sign(grad) = 0.1
+    expect_equal(lf$b$item(), 0.1, tolerance = 1e-6)
+    expect_equal(st$a$t, 1)
+    expect_equal(st$b$t, 1)
+    set.seed(1)
+    torch::torch_manual_seed(1)
+    n <- 200
+    x1 <- rnorm(n)
+    x2 <- rnorm(n)
+    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
+    task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
+    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+    L$loss <- nn_AUCM_loss
+    L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
+    L$callbacks <- make_pesg_callback(lr = 0.05, mode = "adam")
+    L$predict_type <- "prob"
+    L$param_set$set_values(epochs = 30, batch_size = 32, neurons = 8, shuffle = FALSE, seed = 1)
+    L$train(task)
+    lf2 <- L$model$loss_fn
+    expect_gt(as.numeric(lf2$a), as.numeric(lf2$b)) # pos avg > neg avg
+    expect_gte(as.numeric(lf2$alpha), 0) # clamped
+    expect_gt(L$predict(task)$score(mlr3::msr("classif.auc")), 0.8) # pretty good
   })
 }
