@@ -9,13 +9,13 @@ pesg_alpha_step <- function(loss_module, lr) {
   })
 }
 
-pesg_step <- function(loss_module, lr, mode = "sgd", state = NULL) {
+pesg_step <- function(loss_module, lr, mode = "sgd", state = NULL, ...) {
   a <- loss_module$a
   b <- loss_module$b
   if (mode == "adam") {
     if (is.null(state)) state <- list(a = NULL, b = NULL)
-    state$a <- adam_step(a, lr, state = state$a)
-    state$b <- adam_step(b, lr, state = state$b)
+    state$a <- adam_step(a, lr, state = state$a, ...)
+    state$b <- adam_step(b, lr, state = state$b, ...)
   } else {
     torch::with_no_grad({
       a$sub_(lr * a$grad)
@@ -31,12 +31,12 @@ pesg_step <- function(loss_module, lr, mode = "sgd", state = NULL) {
   return(state)
 }
 
-make_pesg_callback <- function(lr = 0.05, mode = "sgd") {
+make_pesg_callback <- function(lr = 0.05, mode = "sgd", ...) {
   state <- NULL
   mlr3torch::torch_callback(
     "pesg",
     on_after_backward = function() {
-      state <<- pesg_step(self$ctx$loss_fn, lr, mode = mode, state = state)
+      state <<- pesg_step(self$ctx$loss_fn, lr, mode = mode, state = state, ...)
     }
   )
 }
