@@ -7,7 +7,6 @@ pesg_alpha_step <- function(loss_module, lr) {
     alpha$add_(2 * lr * (margin + b - a - alpha))
     alpha$clamp_(0, 999)
   })
-  invisible(loss_module)
 }
 
 pesg_step <- function(loss_module, lr) {
@@ -24,5 +23,13 @@ pesg_step <- function(loss_module, lr) {
     b$grad$zero_()
     alpha$grad$zero_()
   })
-  invisible(loss_module)
+}
+
+make_pesg_callback <- function(lr_ab = 0.05) {
+  mlr3torch::torch_callback(
+    "pesg",
+    on_after_backward = function() {
+      pesg_step(self$ctx$loss_fn, lr_ab)
+    }
+  )
 }

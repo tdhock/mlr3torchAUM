@@ -18,7 +18,7 @@ positive_ratio <- function(label_tensor) {
 }
 
 nn_AUCM_loss <- torch::nn_module(
-  "nn_AUCM_loss",
+  c("nn_AUCM_loss", "nn_loss"),
   initialize = function(margin = 1) {
     self$a <- torch::nn_parameter(torch::torch_zeros(1))
     self$b <- torch::nn_parameter(torch::torch_zeros(1))
