@@ -33,3 +33,21 @@ make_pesg_callback <- function(lr_ab = 0.05) {
     }
   )
 }
+
+adam_step <- function(param, lr = 0.001, betas = c(0.9, 0.999), eps = 1e-8, state = NULL) {
+  if (is.null(state)) {
+    state <- list(
+      m = torch::torch_zeros_like(param),
+      v = torch::torch_zeros_like(param),
+      t = 0
+    )
+  }
+  state$t <- state$t + 1
+  grad <- param$grad
+  state$m <- betas[1] * state$m + (1 - betas[1]) * grad
+  state$v <- betas[2] * state$v + (1 - betas[2]) * grad^2
+  m_hat <- state$m / (1 - betas[1]^state$t)
+  v_hat <- state$v / (1 - betas[2]^state$t)
+  torch::with_no_grad(param$sub_(lr * m_hat / (torch::torch_sqrt(v_hat) + eps)))
+  return(state)
+}
