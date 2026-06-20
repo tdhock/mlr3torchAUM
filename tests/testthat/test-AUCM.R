@@ -125,4 +125,27 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(loss_fn$b$grad), 0, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn$alpha$grad), 0, tolerance = 1e-6)
   })
+
+  test_that("Step12: nn_AUCM_loss + PESG callback trains in mlr3torch", {
+    skip_on_cran()
+    set.seed(1)
+    torch::torch_manual_seed(1)
+    n <- 200
+    x1 <- rnorm(n)
+    x2 <- rnorm(n)
+    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
+    task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
+    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+    L$loss <- nn_AUCM_loss
+    L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
+    L$callbacks <- make_pesg_callback(lr_ab = 0.05)
+    L$predict_type <- "prob"
+    L$param_set$set_values(epochs = 30, batch_size = 32, neurons = 8, shuffle = FALSE, seed = 1)
+    L$train(task)
+    lf <- L$model$loss_fn
+    expect_gt(as.numeric(lf$a), as.numeric(lf$b)) # pos avg > neg avg
+    expect_gte(as.numeric(lf$alpha), 0) # clamp
+    auc <- L$predict(task)$score(mlr3::msr("classif.auc"))
+    expect_gt(auc, 0.8) # good auc
+  })
 }
