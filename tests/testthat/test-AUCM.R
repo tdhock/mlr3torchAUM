@@ -108,4 +108,21 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     pesg_alpha_step(loss_fn2, lr = 1)
     expect_equal(loss_fn2$alpha$item(), 0, tolerance = 1e-6)
   })
+
+  test_that("Step10: pesg_step descends a/b, ascends alpha, zeros grads", {
+    skip_on_cran()
+    loss_fn <- nn_AUCM_loss(margin = 1) # a=b=alpha=0
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    loss <- loss_fn(pred, label)
+    loss$backward() # a$grad=-0.2875, b$grad=-0.125, alpha$grad=0.3375
+    pesg_step(loss_fn, lr = 0.1)
+    expect_equal(loss_fn$a$item(), 0.02875, tolerance = 1e-6) # 0 - 0.1*(-0.2875)
+    expect_equal(loss_fn$b$item(), 0.0125, tolerance = 1e-6) # 0 - 0.1*(-0.125)
+    # 2*0.1*(margin + b - a - alpha) = 2*0.1*(1 + 0.0125 - 0.02875 - 0) = 0.19675
+    expect_equal(loss_fn$alpha$item(), 0.19675, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$a$grad), 0, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b$grad), 0, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha$grad), 0, tolerance = 1e-6)
+  })
 }
