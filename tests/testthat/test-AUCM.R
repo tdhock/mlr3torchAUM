@@ -148,4 +148,34 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     auc <- L$predict(task)$score(mlr3::msr("classif.auc"))
     expect_gt(auc, 0.8) # good auc
   })
+
+  test_that("Step13: adam_step implements Adam, matches torch::optim_adam", {
+    skip_on_cran()
+    lr <- 0.1
+    betas <- c(0.9, 0.999)
+    eps <- 1e-8
+    grads <- c(1.0, -2.0, 0.5, 3.0)
+    p_torch <- torch::torch_tensor(0.0, requires_grad = TRUE) # simulate the param
+    opt <- torch::optim_adam(list(p_torch), lr = lr, betas = betas, eps = eps)
+    ground_truth <- numeric(length(grads))
+    for (i in seq_along(grads)) {
+      opt$zero_grad() # clean out grad of the param
+      (grads[i] * p_torch)$backward() # grad is just the grad[i]
+      opt$step()
+      ground_truth[i] <- p_torch$item() # updated param
+    }
+    p_torch <- torch::torch_tensor(0.0, requires_grad = TRUE)
+    state <- NULL
+    for (i in seq_along(grads)) {
+      if (i > 1) p_torch$grad$zero_()
+      (grads[i] * p_torch)$backward()
+      state <- adam_step(p_torch, lr = lr, betas = betas, eps = eps, state = state)
+      expect_equal(p_torch$item(), ground_truth[i], tolerance = 1e-6)
+      if (i == 1) { # check the m and v in state in the first step, grad = 1.0
+        expect_equal(as.numeric(state$m), 0.1, tolerance = 1e-6) # m = 0.9*0 + 0.1*1
+        expect_equal(as.numeric(state$v), 0.001, tolerance = 1e-6) # v = 0.999*0 + 0.001*1^2
+        expect_equal(state$t, 1)
+      }
+    }
+  })
 }
