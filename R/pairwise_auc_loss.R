@@ -1,48 +1,23 @@
-surrogate_loss_names <- c(
-  "squared",
-  "squared_hinge",
-  "hinge",
-  "logistic",
-  "barrier_hinge"
+pairwise_auc_surrogates <- list(
+  squared = function(margin, t) {
+    (margin - t)^2
+  },
+  squared_hinge = function(margin, t) {
+    torch::torch_clamp(margin - t, min = 0)^2
+  },
+  hinge = function(margin, t) {
+    torch::torch_clamp(margin - t, min = 0)
+  },
+  logistic = function(scale, t) {
+    torch::nnf_softplus(-scale * t)
+  },
+  barrier_hinge = function(margin, scale, t) {
+    torch::torch_maximum(
+      -scale * (margin + t) + margin,
+      torch::torch_maximum(margin - t, scale * (t - margin))
+    )
+  }
 )
-
-squared_loss <- function(margin, t) {
-  (margin - t)^2
-}
-
-squared_hinge_loss <- function(margin, t) {
-  torch::torch_clamp(margin - t, min = 0)^2
-}
-
-hinge_loss <- function(margin, t) {
-  torch::torch_clamp(margin - t, min = 0)
-}
-
-logistic_loss <- function(scale, t) {
-  torch::nnf_softplus(-scale * t)
-}
-
-barrier_hinge_loss <- function(margin, scale, t) {
-  torch::torch_maximum(
-    -scale * (margin + t) + margin,
-    torch::torch_maximum(margin - t, scale * (t - margin))
-  )
-}
-
-get_surrogate_loss <- function(loss_name = "squared_hinge") {
-  switch(loss_name,
-    squared = squared_loss,
-    squared_hinge = squared_hinge_loss,
-    hinge = hinge_loss,
-    logistic = logistic_loss,
-    barrier_hinge = barrier_hinge_loss,
-    stop(sprintf(
-      "Unknown surrogate loss '%s'. Choose from: %s",
-      loss_name,
-      paste(surrogate_loss_names, collapse = ", ")
-    ), call. = FALSE)
-  )
-}
 
 nn_pairwise_auc_loss <- torch::nn_module(
   c("PairwiseAUC","nn_loss"),
@@ -53,7 +28,14 @@ nn_pairwise_auc_loss <- torch::nn_module(
     self$surr_loss_name <- surr_loss
     self$margin <- margin
     self$scale <- scale
-    self$surrogate <- get_surrogate_loss(surr_loss)
+    if(!surr_loss %in% names(pairwise_auc_surrogates)){
+      stop(sprintf(
+        "Unknown surrogate loss '%s'. Choose from: %s",
+        surr_loss,
+        paste(names(pairwise_auc_surrogates), collapse = ", ")
+      ), call. = FALSE)
+    }
+    self$surrogate <- pairwise_auc_surrogates[[surr_loss]]
     for (name in c("evals", "zeros", "all_one_class")) {
       self$buffer(name)
     }
