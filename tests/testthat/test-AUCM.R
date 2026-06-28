@@ -294,4 +294,16 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     )$model_acc
     expect_equal(as.numeric(model_acc_updated2), c(10.875, 11.95), tolerance = 1e-6) # calculate by hand
   })
+
+  test_that("Step 20: test update regularizer", {
+    skip_on_cran()
+    model_acc1 <- torch::torch_tensor(c(10, 20), dtype = torch::torch_float32())
+    T1 <- 5
+    model_ref1 <- pesg_update_regularizer(model_acc1, T1)$model_ref
+    expect_equal(as.numeric(model_ref1), c(2, 4), tolerance = 1e-6)
+    model_acc2 <- torch::torch_tensor(c(3, 6, 9), dtype = torch::torch_float32())
+    T2 <- 3
+    model_ref2 <- pesg_update_regularizer(model_acc2, T2)$model_ref
+    expect_equal(as.numeric(model_ref2), c(1, 2, 3), tolerance = 1e-6)
+  })
 }
