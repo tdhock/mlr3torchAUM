@@ -32,6 +32,10 @@ pesg_update_regularizer <- function(model_acc, T) {
   ))
 }
 
+pesg_update_lr <- function(lr, decay_factor) {
+  return(lr / decay_factor)
+}
+
 pesg_alpha_step <- function(loss_module, lr) {
   torch::with_no_grad({
     a <- loss_module$a
