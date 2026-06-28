@@ -220,4 +220,18 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     grad_clamped_2 <- pesg_clamp_grad(grad, 0.4)
     expect_equal(as.numeric(grad_clamped_2), c(0.4, -0.4, 0.3, 0.4), tolerance = 1e-6)
   })
+
+  test_that("Step 16: test weight decay", {
+    skip_on_cran()
+    grad1 <- torch::torch_tensor(c(2, -3, 0.3, 0.4), dtype = torch::torch_float32())
+    p1 <- torch::torch_tensor(c(5, 5, 5, 5), dtype = torch::torch_float32())
+    grad_only_clamp <- pesg_d_p(grad1, p1, clamp_value = 1, weight_decay = 0)
+    expect_equal(as.numeric(grad_only_clamp), c(1, -1, 0.3, 0.4), tolerance = 1e-6)
+    grad2 <- torch::torch_tensor(c(0.3, 0.4), dtype = torch::torch_float32())
+    p2 <- torch::torch_tensor(c(2, 4), dtype = torch::torch_float32())
+    grad_only_weight_decay <- pesg_d_p(grad2, p2, clamp_value = 1, weight_decay = 0.5)
+    expect_equal(as.numeric(grad_only_weight_decay), c(1.3, 2.4), tolerance = 1e-6)
+    grad_both <- pesg_d_p(grad2, p2, clamp_value = 0.3, weight_decay = 0.5)
+    expect_equal(as.numeric(grad_both), c(1.3, 2.3), tolerance = 1e-6)
+  })
 }

@@ -2,6 +2,10 @@ pesg_clamp_grad <- function(grad, clamp_value) {
   return(torch::torch_clamp(grad, -clamp_value, clamp_value))
 }
 
+pesg_d_p <- function(grad, p, clamp_value, weight_decay) {
+  return(pesg_clamp_grad(grad, clamp_value) + weight_decay * p)
+}
+
 pesg_alpha_step <- function(loss_module, lr) {
   torch::with_no_grad({
     a <- loss_module$a
