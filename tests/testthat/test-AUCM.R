@@ -306,4 +306,16 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     model_ref2 <- pesg_update_regularizer(model_acc2, T2)$model_ref
     expect_equal(as.numeric(model_ref2), c(1, 2, 3), tolerance = 1e-6)
   })
+
+  test_that("Step 21: test decay learning rate", {
+    skip_on_cran()
+    lr1 <- 0.1
+    decay_factor1 <- 2
+    lr_updated1 <- pesg_update_lr(lr1, decay_factor1)
+    expect_equal(lr_updated1, 0.05)
+    lr2 <- 0.05
+    decay_factor2 <- 10
+    lr_updated2 <- pesg_update_lr(lr2, decay_factor2)
+    expect_equal(lr_updated2, 0.005)
+  })
 }
