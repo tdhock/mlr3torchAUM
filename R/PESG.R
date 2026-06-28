@@ -36,6 +36,64 @@ pesg_update_lr <- function(lr, decay_factor) {
   return(lr / decay_factor)
 }
 
+optim_pesg <- torch::optimizer(
+  initialize = function(
+    params, lr, clamp_value, weight_decay,
+    epoch_decay, momentum, decay_factor
+  ) {
+    super$initialize(params, defaults = list(
+      lr = lr, clamp_value = clamp_value, weight_decay = weight_decay,
+      epoch_decay = epoch_decay, momentum = momentum, decay_factor = decay_factor
+    ))
+  },
+  step = function() {
+    torch::with_no_grad({
+      for (group in self$param_groups) {
+        for (param in group$params) {
+          if (is.null(param$grad)) next
+          state <- self$state$get(param)
+          if (is.null(state)) {
+            state <- list(
+              buffer = torch::torch_zeros_like(param),
+              model_acc = torch::torch_zeros_like(param),
+              model_ref = torch::torch_zeros_like(param),
+              T = 0
+            )
+          }
+          res <- pesg_primal_step(param, param$grad,
+            lr = group$lr, clamp_value = group$clamp_value,
+            weight_decay = group$weight_decay, epoch_decay = group$epoch_decay, model_ref = state$model_ref,
+            momentum = group$momentum, buffer = state$buffer, model_acc = state$model_acc
+          )
+          state$buffer <- res$buffer
+          state$model_acc <- res$model_acc
+          state$T <- state$T + 1
+          self$state$set(param, state)
+        }
+      }
+    })
+  },
+  update_regularizer = function() {
+    for (group in self$param_groups) {
+      for (param in group) {
+        state <- self$state$get(param)
+        res <- pesg_update_regularizer(state$model_acc, state$T)
+        state$model_ref <- res$model_ref
+        state$model_acc <- res$model_acc
+        state$T <- res$T
+        self$state$set(param, state)
+      }
+    }
+  },
+  update_lr = function() {
+    for (i in seq_along(self$param_groups)) {
+      self$param_groups[[i]]$lr <- pesg_update_lr(
+        self$param_groups[[i]]$lr, self$param_groups[[i]]$decay_factor
+      )
+    }
+  }
+)
+
 pesg_alpha_step <- function(loss_module, lr) {
   torch::with_no_grad({
     a <- loss_module$a
