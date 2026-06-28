@@ -234,4 +234,27 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     grad_both <- pesg_d_p(grad2, p2, clamp_value = 0.3, weight_decay = 0.5)
     expect_equal(as.numeric(grad_both), c(1.3, 2.3), tolerance = 1e-6)
   })
+
+  test_that("Step 17: test epoch decay", {
+    skip_on_cran()
+    grad <- torch::torch_tensor(c(0.3, 0.4), dtype = torch::torch_float32())
+    p <- torch::torch_tensor(2, dtype = torch::torch_float32()) # broadcast
+    model_ref <- torch::torch_tensor(1, dtype = torch::torch_float32()) # broadcast
+    grad_clamp_epoch_decay <- pesg_d_p(grad, p,
+      clamp_value = 0.3, weight_decay = 0,
+      epoch_decay = 0.1, model_ref = model_ref
+    )
+    expect_equal(as.numeric(grad_clamp_epoch_decay),
+      c(0.4, 0.4), # 0.3 + 2 * 0 + 0.1 * (2 - 1)
+      tolerance = 1e-6
+    )
+    grad_all <- pesg_d_p(grad, p,
+      clamp_value = 0.3, weight_decay = 0.5,
+      epoch_decay = 0.1, model_ref = model_ref
+    )
+    expect_equal(as.numeric(grad_all),
+      c(1.4, 1.4), # 0.3 + 2 * 0.5 + 0.1 * (2 - 1)
+      tolerance = 1e-6
+    )
+  })
 }
