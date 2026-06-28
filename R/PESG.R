@@ -75,7 +75,7 @@ optim_pesg <- torch::optimizer(
   },
   update_regularizer = function() {
     for (group in self$param_groups) {
-      for (param in group) {
+      for (param in group$params) {
         state <- self$state$get(param)
         res <- pesg_update_regularizer(state$model_acc, state$T)
         state$model_ref <- res$model_ref
@@ -163,6 +163,42 @@ make_pesg_callback <- function(lr = 0.05, mode = "sgd", ...) {
     "pesg",
     on_after_backward = function() {
       state <<- pesg_step(self$ctx$loss_fn, lr, mode = mode, state = state, ...)
+    }
+  )
+}
+
+make_pesg_callback_full <- function(
+  lr, clamp_value, weight_decay,
+  epoch_decay, momentum, decay_factor
+) {
+  state_a <- NULL
+  state_b <- NULL
+  lr_ab <- lr
+  mlr3torch::torch_callback(
+    "pesg_full",
+    on_after_backward = function() {
+      res <- pesg_full_step(
+        self$ctx$loss_fn,
+        lr_ab, clamp_value, weight_decay,
+        epoch_decay, momentum, state_a, state_b
+      )
+      state_a <<- res$state_a
+      state_b <<- res$state_b
+    },
+    on_epoch_end = function() {
+      self$ctx$optimizer$update_regularizer() # network weights
+      self$ctx$optimizer$update_lr() # network weights
+      reg_a <- pesg_update_regularizer(state_a$model_acc, state_a$T)
+      reg_b <- pesg_update_regularizer(state_b$model_acc, state_b$T)
+      state_a <<- list(
+        model_ref = reg_a$model_ref, model_acc = reg_a$model_acc,
+        T = reg_a$T, buffer = state_a$buffer
+      )
+      state_b <<- list(
+        model_ref = reg_b$model_ref, model_acc = reg_b$model_acc,
+        T = reg_b$T, buffer = state_b$buffer
+      )
+      lr_ab <<- pesg_update_lr(lr_ab, decay_factor)
     }
   )
 }

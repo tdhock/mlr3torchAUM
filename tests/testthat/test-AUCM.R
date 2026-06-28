@@ -363,4 +363,43 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(loss_fn$b$grad), 0, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn$alpha$grad), 0, tolerance = 1e-6)
   })
+
+  test_that("Step 24: full callback constructs", {
+    skip_on_cran()
+    cb <- make_pesg_callback_full(
+      lr = 0.1, clamp_value = 1, weight_decay = 0,
+      epoch_decay = 0, momentum = 0.9, decay_factor = 2
+    )
+    expect_true(inherits(cb, "TorchCallback"))
+  })
+
+  test_that("Step 25: e2e optim_pesg + full PESG callback", {
+    skip_on_cran()
+    set.seed(1)
+    torch::torch_manual_seed(1)
+    n <- 200
+    x1 <- rnorm(n)
+    x2 <- rnorm(n)
+    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
+    task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
+    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+    L$loss <- nn_AUCM_loss
+    opt <- mlr3torch::as_torch_optimizer(optim_pesg)
+    opt$param_set$set_values(
+      lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2
+    )
+    L$optimizer <- opt
+    L$callbacks <- make_pesg_callback_full(
+      lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2
+    )
+    L$predict_type <- "prob"
+    L$param_set$set_values(epochs = 10, batch_size = 32, neurons = 4, shuffle = TRUE, seed = 1)
+    L$train(task)
+    loss_fn <- L$model$loss_fn
+    expect_gt(L$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
+    expect_gt(as.numeric(loss_fn$a), as.numeric(loss_fn$b))
+    expect_gte(as.numeric(loss_fn$alpha), 0)
+  })
 }
