@@ -3,7 +3,8 @@
 \alias{AUCM}
 \title{AUCM Loss}
 \description{
-Faithful R/torch port of the AUC-Margin loss from LibAUC: a surrogate for AUC maximization.
+Faithful R/torch port of the AUC-Margin loss from LibAUC: a surrogate for AUC
+maximization.
 Train with \code{\link{make_pesg_callback}}.
 }
 \usage{

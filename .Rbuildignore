@@ -4,3 +4,6 @@ build.sh
 ^site$
 ^private$
 ^team-template$
+^notebooks$
+^\.git$
+
