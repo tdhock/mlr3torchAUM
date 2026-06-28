@@ -10,6 +10,10 @@ pesg_d_p <- function(
     epoch_decay * (p - model_ref))
 }
 
+pesg_buffer_momentum <- function(dp, buffer, momentum) {
+  return((1 - momentum) * buffer + momentum * dp)
+}
+
 pesg_alpha_step <- function(loss_module, lr) {
   torch::with_no_grad({
     a <- loss_module$a
