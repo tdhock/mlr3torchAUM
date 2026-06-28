@@ -272,4 +272,26 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     g_init_buff <- pesg_buffer_momentum(dp, buf0, momentum = 0.5)
     expect_equal(as.numeric(g_init_buff), c(0.15, 0.2), tolerance = 1e-6)
   })
+
+  test_that("Step 19: test primal step", {
+    skip_on_cran()
+    grad1 <- torch::torch_tensor(c(0.5, -0.5), dtype = torch::torch_float32())
+    p1 <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    buf1 <- torch::torch_tensor(c(0, 0), dtype = torch::torch_float32())
+    model_acc1 <- torch::torch_tensor(c(0, 0), dtype = torch::torch_float32())
+    model_acc_updated1 <- pesg_primal_step(p1, grad1,
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, model_ref = 0, momentum = 1, buffer = buf1, model_acc = model_acc1
+    )$model_acc
+    expect_equal(as.numeric(model_acc_updated1), c(0.95, 2.05), tolerance = 1e-6) # calculate by hand
+    grad2 <- torch::torch_tensor(c(2, -2), dtype = torch::torch_float32())
+    p2 <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    buf2 <- torch::torch_tensor(c(1, 1), dtype = torch::torch_float32())
+    model_acc2 <- torch::torch_tensor(c(10, 10), dtype = torch::torch_float32())
+    model_acc_updated2 <- pesg_primal_step(p2, grad2,
+      lr = 0.1, clamp_value = 1, weight_decay = 0.5,
+      epoch_decay = 0, model_ref = 0, momentum = 0.5, buffer = buf2, model_acc = model_acc2
+    )$model_acc
+    expect_equal(as.numeric(model_acc_updated2), c(10.875, 11.95), tolerance = 1e-6) # calculate by hand
+  })
 }

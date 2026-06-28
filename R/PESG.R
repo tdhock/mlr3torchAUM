@@ -14,6 +14,17 @@ pesg_buffer_momentum <- function(dp, buffer, momentum) {
   return((1 - momentum) * buffer + momentum * dp)
 }
 
+pesg_primal_step <- function(p, grad,
+                             lr, clamp_value, weight_decay,
+                             epoch_decay, model_ref, momentum, buffer, model_acc) {
+  dp <- pesg_d_p(grad, p, clamp_value, weight_decay, epoch_decay, model_ref)
+  buffer_new <- pesg_buffer_momentum(dp, buffer, momentum)
+  torch::with_no_grad({
+    p$sub_(lr * buffer_new)
+  })
+  return(list(buffer = buffer_new, model_acc = model_acc + p))
+}
+
 pesg_alpha_step <- function(loss_module, lr) {
   torch::with_no_grad({
     a <- loss_module$a
