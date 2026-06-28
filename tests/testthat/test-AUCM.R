@@ -337,4 +337,30 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(x), as.numeric(x_ref))
     expect_true(!is.null(mlr3torch::as_torch_optimizer(optim_pesg)))
   })
+
+  test_that("Step 23: pesg full step for loss parameters", {
+    skip_on_cran()
+    loss_fn <- nn_AUCM_loss(margin = 1)
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    target <- torch::torch_tensor(c(0, 0, 1, 1),
+      dtype = torch::torch_long()
+    )
+    loss_fn(pred, target)$backward()
+    state_a <- list(buffer = 0, model_acc = 0, model_ref = 0, T = 0)
+    state_b <- list(buffer = 0, model_acc = 0, model_ref = 0, T = 0)
+    pesg_full_step(loss_fn,
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, momentum = 1, state_a = state_a, state_b = state_b
+    )
+    # Same as Step 10
+    expect_equal(loss_fn$a$item(), 0.02875, tolerance = 1e-6) # 0 - 0.1*(-0.2875)
+    expect_equal(loss_fn$b$item(), 0.0125, tolerance = 1e-6) # 0 - 0.1*(-0.125)
+    # 2*0.1*(margin + b - a - alpha) = 2*0.1*(1 + 0.0125 - 0.02875 - 0) = 0.19675
+    expect_equal(loss_fn$alpha$item(), 0.19675, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$a$grad), 0, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b$grad), 0, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha$grad), 0, tolerance = 1e-6)
+  })
 }
