@@ -211,4 +211,13 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_gte(as.numeric(lf2$alpha), 0) # clamped
     expect_gt(L$predict(task)$score(mlr3::msr("classif.auc")), 0.8) # pretty good
   })
+
+  test_that("Step 15: test clamp grad function", {
+    skip_on_cran()
+    grad <- torch::torch_tensor(c(2, -3, 0.3, 0.4), dtype = torch::torch_float32())
+    grad_clamped_1 <- pesg_clamp_grad(grad, 1)
+    expect_equal(as.numeric(grad_clamped_1), c(1, -1, 0.3, 0.4), tolerance = 1e-6)
+    grad_clamped_2 <- pesg_clamp_grad(grad, 0.4)
+    expect_equal(as.numeric(grad_clamped_2), c(0.4, -0.4, 0.3, 0.4), tolerance = 1e-6)
+  })
 }
