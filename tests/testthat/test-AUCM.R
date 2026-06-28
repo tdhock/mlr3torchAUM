@@ -257,4 +257,19 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       tolerance = 1e-6
     )
   })
+
+  test_that("Step 18: test momentum", {
+    skip_on_cran()
+    dp <- torch::torch_tensor(c(0.3, 0.4), dtype = torch::torch_float32())
+    buf <- torch::torch_tensor(c(1, 1), dtype = torch::torch_float32())
+    g_no_buf <- pesg_buffer_momentum(dp, buf, momentum = 1)
+    expect_equal(as.numeric(g_no_buf), as.numeric(dp), tolerance = 1e-6)
+    g_no_dp <- pesg_buffer_momentum(dp, buf, momentum = 0)
+    expect_equal(as.numeric(g_no_dp), as.numeric(buf), tolerance = 1e-6)
+    g_both <- pesg_buffer_momentum(dp, buf, momentum = 0.5)
+    expect_equal(as.numeric(g_both), c(0.65, 0.7), tolerance = 1e-6)
+    buf0 <- torch::torch_tensor(0, dtype = torch::torch_float32())
+    g_init_buff <- pesg_buffer_momentum(dp, buf0, momentum = 0.5)
+    expect_equal(as.numeric(g_init_buff), c(0.15, 0.2), tolerance = 1e-6)
+  })
 }
