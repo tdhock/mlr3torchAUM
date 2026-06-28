@@ -25,6 +25,13 @@ pesg_primal_step <- function(p, grad,
   return(list(buffer = buffer_new, model_acc = model_acc + p))
 }
 
+pesg_update_regularizer <- function(model_acc, T) {
+  return(list(
+    model_ref = model_acc / T,
+    model_acc = torch::torch_zeros_like(model_acc), T = 0
+  ))
+}
+
 pesg_alpha_step <- function(loss_module, lr) {
   torch::with_no_grad({
     a <- loss_module$a
