@@ -318,4 +318,23 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     lr_updated2 <- pesg_update_lr(lr2, decay_factor2)
     expect_equal(lr_updated2, 0.005)
   })
+
+  test_that("Step 22: optimizer", {
+    skip_on_cran()
+    x <- torch::torch_tensor(c(1, 2, 3), dtype = torch::torch_float32(), requires_grad = TRUE)
+    opt <- optim_pesg(list(x),
+      lr = 0.1, clamp_value = 2, weight_decay = 0.8,
+      epoch_decay = 0.1, momentum = 0.5, decay_factor = 2
+    )
+    x$sum()$backward()
+    grad <- x$grad$clone() # 1,1,1
+    opt$step()
+    x_ref <- torch::torch_tensor(c(1, 2, 3), dtype = torch::torch_float32())
+    pesg_primal_step(x_ref, grad,
+      lr = 0.1, clamp_value = 2, weight_decay = 0.8,
+      epoch_decay = 0.1, model_ref = 0, momentum = 0.5, buffer = 0, model_acc = 0
+    ) # same hyperparameters; in-place renew x_ref
+    expect_equal(as.numeric(x), as.numeric(x_ref))
+    expect_true(!is.null(mlr3torch::as_torch_optimizer(optim_pesg)))
+  })
 }
