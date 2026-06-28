@@ -25,6 +25,7 @@ of a \code{TorchLearner}.
 \examples{
 if(torch::torch_is_installed() && requireNamespace("mlr3torch")){
 cb_sgd <- mlr3torchAUM::make_pesg_callback(lr = 0.05, mode = "sgd")
-cb_adam <- mlr3torchAUM::make_pesg_callback(lr = 0.001, mode = "adam", betas = c(0.9, 0.999), eps = 1e-8)
+cb_adam <- mlr3torchAUM::make_pesg_callback(lr = 0.001, mode = "adam",
+                                            betas = c(0.9, 0.999), eps = 1e-8)
 }
 }

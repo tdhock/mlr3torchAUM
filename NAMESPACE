@@ -1,6 +1,6 @@
 export(batch_sampler_stratified, batch_sampler_random, MeasureClassifROCAUM, MeasureClassifInvAUC, nn_ROCAUM_loss, ROCAUM)
 export(Draw_ROC_curve_macro,Draw_ROC_curve_micro,ROC_AUC_macro,ROC_AUC_micro,ROC_AUM_macro,ROC_AUM_micro)
-export(AUCM, nn_AUCM_loss, make_pesg_callback)
+export(AUCM, nn_AUCM_loss, make_pesg_callback, optim_pesg, make_pesg_callback_full)
 importFrom(data.table, data.table)
 importFrom(mlr3, MeasureClassif, msr)
 importFrom(R6, R6Class)
