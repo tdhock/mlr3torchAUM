@@ -75,12 +75,12 @@ nn_pairwise_auc_loss <- torch::nn_module(
   }
 )
 
-torch_loss_pairwise_auc <- function() {
+torch_loss_pairwise_auc_surrogate <- function() {
   mlr3torch::TorchLoss$new(
     torch_loss = nn_pairwise_auc_loss,
     task_types = "classif",
-    id         = "pairwise_auc",
-    label      = "Pairwise AUC Loss",
+    id         = "pairwise_auc_surrogate",
+    label      = "Pairwise AUC surrogate",
     packages   = "mlr3torchAUM",
     man        = "mlr3torchAUM::nn_pairwise_auc_loss"
   )

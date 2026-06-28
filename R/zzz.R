@@ -6,7 +6,7 @@ register_mlr3 = function() {
 }
 
 register_mlr3torch = function(...) {
-  mlr3torch::mlr3torch_losses$add("pairwise_auc", torch_loss_pairwise_auc)
+  mlr3torch::mlr3torch_losses$add("pairwise_auc_surrogate", torch_loss_pairwise_auc_surrogate)
 }
 
 .onLoad = function(libname, pkgname) { # nolint
