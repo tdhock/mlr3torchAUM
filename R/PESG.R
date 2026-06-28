@@ -105,6 +105,36 @@ pesg_alpha_step <- function(loss_module, lr) {
   })
 }
 
+pesg_full_step <- function(loss_module,
+                           lr, clamp_value, weight_decay,
+                           epoch_decay, momentum, state_a, state_b) {
+  if (is.null(state_a)) state_a <- list(buffer = 0, model_ref = 0, model_acc = 0, T = 0)
+  if (is.null(state_b)) state_b <- list(buffer = 0, model_ref = 0, model_acc = 0, T = 0)
+  a <- loss_module$a
+  b <- loss_module$b
+  res_a <- pesg_primal_step(
+    a, a$grad, lr, clamp_value, weight_decay,
+    epoch_decay, state_a$model_ref, momentum, state_a$buffer, state_a$model_acc
+  )
+  res_b <- pesg_primal_step(
+    b, b$grad, lr, clamp_value, weight_decay,
+    epoch_decay, state_b$model_ref, momentum, state_b$buffer, state_b$model_acc
+  )
+  state_a$buffer <- res_a$buffer
+  state_b$buffer <- res_b$buffer
+  state_a$model_acc <- res_a$model_acc
+  state_b$model_acc <- res_b$model_acc
+  state_a$T <- state_a$T + 1
+  state_b$T <- state_b$T + 1
+  pesg_alpha_step(loss_module, lr)
+  torch::with_no_grad({
+    a$grad$zero_()
+    b$grad$zero_()
+    loss_module$alpha$grad$zero_()
+  })
+  return(list(state_a = state_a, state_b = state_b))
+}
+
 pesg_step <- function(loss_module, lr, mode = "sgd", state = NULL, ...) {
   a <- loss_module$a
   b <- loss_module$b
