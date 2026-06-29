@@ -25,5 +25,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(length(loss$parameters), 3)
     expect_equal(loss$margin, 1)
     expect_equal(loss$k, 1)
+    loss <- nn_CompositionalAUC_loss(k = 2) # defaults: margin = 1
+    expect_equal(loss$k, 2)
   })
 }
