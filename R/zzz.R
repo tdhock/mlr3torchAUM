@@ -5,6 +5,10 @@ register_mlr3 = function() {
   mlr3::mlr_measures$add("classif.invauc", MeasureClassifInvAUC)
 }
 
+register_mlr3torch = function(...) {
+  mlr3torch::mlr3torch_losses$add("pairwise_auc_surrogate", torch_loss_pairwise_auc_surrogate)
+}
+
 .onLoad = function(libname, pkgname) { # nolint
   # Configure Logger:
   assign("lg", lgr::get_logger("mlr3"), envir = parent.env(environment()))
@@ -14,6 +18,7 @@ register_mlr3 = function() {
   x = utils::getFromNamespace("mlr_reflections", ns = "mlr3")
   x$loaded_packages = c(x$loaded_packages, "mlr3torchAUM")
   mlr3misc::register_namespace_callback(pkgname, "mlr3", register_mlr3)
+  mlr3misc::register_namespace_callback(pkgname, "mlr3torch", register_mlr3torch)
 }
 
 mlr3misc::leanify_package()
