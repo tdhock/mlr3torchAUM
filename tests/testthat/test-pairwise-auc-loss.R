@@ -4,10 +4,9 @@ data.table::setDTthreads(1L)
 if(torch::torch_is_installed()){
 
   test_that("nn_pairwise_auc_loss rejects invalid surrogate names", {
-    expect_error(
-      mlr3torchAUM::nn_pairwise_auc_loss(surr_loss = "invalid_loss"),
-      "Unknown surrogate loss"
-    )
+    expect_error({
+      mlr3torchAUM::nn_pairwise_auc_loss(surr_loss = "invalid_loss")
+    }, "Unknown surrogate loss")
   })
 
   test_that("nn_pairwise_auc_loss matches R mathematical formulas for all surrogates", {

@@ -1,3 +1,7 @@
+Changes in version 2026.6.29
+
+- nn_pairwise_auc_loss and pairwise_auc_surrogates implemented as a surrogate loss for pairwise AUC optimization, from Python libauc reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
+
 Changes in version 2025.9.23 (PR#3)
 
 - mlr3_measures$add(...) in register_mlr3().
