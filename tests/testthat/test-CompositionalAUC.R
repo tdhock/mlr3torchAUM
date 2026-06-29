@@ -68,4 +68,27 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(loss4$item(), 0.11656250804662704, tolerance = 1e-6)
     expect_equal(loss_fn$step$item(), 4)
   })
+
+  test_that("All one class batch returns no errors no warnings", {
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
+      dtype = torch::torch_float32()
+    )
+    target <- torch::torch_tensor(c(0, 0, 0, 0),
+      dtype = torch::torch_float32()
+    ) # all negative samples
+    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn(pred, target) # first time CE
+    loss <- loss_fn(pred, target) # second time AUCM
+    expect_equal(loss$item(), 0, tolerance = 1e-6)
+    pred2 <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
+      dtype = torch::torch_float32()
+    )
+    target2 <- torch::torch_tensor(c(1, 1, 1, 1),
+      dtype = torch::torch_float32()
+    ) # all positive samples
+    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn(pred2, target2) # first time CE
+    loss2 <- loss_fn(pred2, target2) # second time AUCM
+    expect_equal(loss2$item(), 0, tolerance = 1e-6)
+  })
 }
