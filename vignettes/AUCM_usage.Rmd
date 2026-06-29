@@ -59,10 +59,18 @@ if(torch_available){
   result_for_sampler <- function(batching){
     L <- mlr3torch::LearnerTorchMLP$new(task_type="classif")
     L$loss <- mlr3torchAUM::nn_AUCM_loss
-    L$optimizer <- mlr3torch::t_opt("sgd", lr=0.001)
+    opt <- mlr3torch::as_torch_optimizer(mlr3torchAUM::optim_pesg)
+    opt$param_set$set_values(
+      lr = 0.01, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2
+    )
+    L$optimizer <- opt
     L$predict_type <- "prob"
     L$callbacks <- list(mlr3torch::t_clbk("history"), 
-    mlr3torchAUM::make_pesg_callback(lr = 0.001, mode = "sgd"))
+    mlr3torchAUM::make_pesg_callback_full(
+      lr = 0.01, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2
+    ))
     L$param_set$set_values(
       epochs=20, batch_size=32, seed=1,
       measures_valid=measure_list,
