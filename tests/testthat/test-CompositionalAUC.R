@@ -28,4 +28,19 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     loss <- nn_CompositionalAUC_loss(k = 2) # defaults: margin = 1
     expect_equal(loss$k, 2)
   })
+
+  test_that("test loss function's CE branch", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
+    target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    loss_fn <- nn_CompositionalAUC_loss()
+    loss <- loss_fn(pred, target)
+    # import torch
+    # import torch.nn.functional as F
+    # yp = torch.tensor([0.1, 0.4, 0.35, 0.8]).reshape(-1, 1)
+    # yt = torch.tensor([0., 0., 1., 1.]).reshape(-1, 1)
+    # print("BCE step0 =", repr(F.binary_cross_entropy(yp, yt).item()))
+    expect_equal(loss$item(), 0.47228795289993286, tolerance = 1e-6)
+    expect_equal(loss_fn$step$item(), 1)
+  })
 }
