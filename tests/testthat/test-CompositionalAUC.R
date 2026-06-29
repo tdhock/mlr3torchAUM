@@ -91,4 +91,36 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     loss2 <- loss_fn(pred2, target2) # second time AUCM
     expect_equal(loss2$item(), 0, tolerance = 1e-6)
   })
+
+  test_that("test pdsca_step", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    loss_fn <- nn_CompositionalAUC_loss()
+    loss_ce <- loss_fn(pred, target) # first time: CE
+    loss_ce$backward()
+    res_ce <- pdsca_step(
+      loss_module = loss_fn, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0, momentum = 0.999,
+      pass = "ce", state_a = NULL, state_b = NULL
+    )
+    expect_equal(as.numeric(loss_fn$a), 0)
+    expect_equal(as.numeric(loss_fn$b), 0)
+    expect_equal(as.numeric(loss_fn$alpha), 0)
+    expect_equal(res_ce$state_a, NULL)
+    expect_equal(res_ce$state_b, NULL)
+    loss_aucm <- loss_fn(pred, target) # second time: AUCM
+    loss_aucm$backward()
+    res_aucm <- pdsca_step(
+      loss_module = loss_fn, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0, momentum = 0.999,
+      pass = "aucm", state_a = NULL, state_b = NULL
+    )
+    # verified by LibAUC python library
+    expect_equal(as.numeric(loss_fn$a), 0.028750000521540642, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b), 0.012500000186264515, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha), 0.19675001502037048, tolerance = 1e-6)
+  })
 }
