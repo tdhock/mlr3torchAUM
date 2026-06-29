@@ -18,7 +18,11 @@ pesg_primal_step <- function(p, grad,
                              lr, clamp_value, weight_decay,
                              epoch_decay, model_ref, momentum, buffer, model_acc) {
   dp <- pesg_d_p(grad, p, clamp_value, weight_decay, epoch_decay, model_ref)
-  buffer_new <- pesg_buffer_momentum(dp, buffer, momentum)
+  if (is.null(buffer)) {
+    buffer_new <- dp$clone()
+  } else {
+    buffer_new <- pesg_buffer_momentum(dp, buffer, momentum)
+  }
   torch::with_no_grad({
     p$sub_(lr * buffer_new)
   })
@@ -54,7 +58,7 @@ optim_pesg <- torch::optimizer(
           state <- self$state$get(param)
           if (is.null(state)) {
             state <- list(
-              buffer = torch::torch_zeros_like(param),
+              buffer = NULL, # first encounter
               model_acc = torch::torch_zeros_like(param),
               model_ref = torch::torch_zeros_like(param),
               T = 0
@@ -108,8 +112,8 @@ pesg_alpha_step <- function(loss_module, lr) {
 pesg_full_step <- function(loss_module,
                            lr, clamp_value, weight_decay,
                            epoch_decay, momentum, state_a, state_b) {
-  if (is.null(state_a)) state_a <- list(buffer = 0, model_ref = 0, model_acc = 0, T = 0)
-  if (is.null(state_b)) state_b <- list(buffer = 0, model_ref = 0, model_acc = 0, T = 0)
+  if (is.null(state_a)) state_a <- list(buffer = NULL, model_ref = 0, model_acc = 0, T = 0)
+  if (is.null(state_b)) state_b <- list(buffer = NULL, model_ref = 0, model_acc = 0, T = 0)
   a <- loss_module$a
   b <- loss_module$b
   res_a <- pesg_primal_step(
