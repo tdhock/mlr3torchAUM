@@ -14,10 +14,13 @@ nn_CompositionalAUC_loss <- torch::nn_module(
   },
   forward = function(pred, target) {
     if (is_ce_step(self$step$item(), self$k)) {
-      self$step$add_(1L)
-      return(torch::nnf_binary_cross_entropy(
+      loss <- torch::nnf_binary_cross_entropy(
         pred$flatten(), target$flatten()
-      ))
+      )
+    } else {
+      loss <- AUCM(pred, target, self$a, self$b, self$alpha, self$margin)
     }
+    self$step$add_(1L)
+    return(loss)
   }
 )

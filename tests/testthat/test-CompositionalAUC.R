@@ -43,4 +43,29 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(loss$item(), 0.47228795289993286, tolerance = 1e-6)
     expect_equal(loss_fn$step$item(), 1)
   })
+
+  test_that("test loss function", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
+    target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn(pred, target) # first time
+    loss2 <- loss_fn(pred, target) # second time, AUCM
+    # import torch
+    # from libauc.losses.auc import CompositionalAUCLoss
+    # loss_fn = CompositionalAUCLoss(margin=1.0, k=1, version='v1', device='cpu')
+    # yp = torch.tensor([0.1, 0.4, 0.35, 0.8]).reshape(-1, 1)
+    # yt = torch.tensor([0., 0., 1., 1.]).reshape(-1, 1)
+    # print("call1 (CE)   =", repr(loss_fn(yp, yt).item()))   # 0.47228795289993286
+    # print("call2 (AUCM) =", repr(loss_fn(yp, yt).item()),
+    #       "p=", float(loss_fn.p))
+    expect_equal(loss2$item(), 0.11656250804662704, tolerance = 1e-6)
+    expect_equal(loss_fn$step$item(), 2)
+    loss3 <- loss_fn(pred, target) # third time, CE
+    expect_equal(loss3$item(), 0.47228795289993286, tolerance = 1e-6)
+    expect_equal(loss_fn$step$item(), 3)
+    loss4 <- loss_fn(pred, target) # fourth time, AUCM
+    expect_equal(loss4$item(), 0.11656250804662704, tolerance = 1e-6)
+    expect_equal(loss_fn$step$item(), 4)
+  })
 }
