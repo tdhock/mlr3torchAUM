@@ -9,6 +9,6 @@ nn_CompositionalAUC_loss <- torch::nn_module(
     self$b <- torch::nn_parameter(torch::torch_zeros(1))
     self$alpha <- torch::nn_parameter(torch::torch_zeros(1))
     self$margin <- margin
-    self$k <- 1
+    self$k <- k
   }
 )
