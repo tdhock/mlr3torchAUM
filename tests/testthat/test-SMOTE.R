@@ -35,7 +35,6 @@ test_that("test minority mode of check_sampling strategy", {
 test_that("test unknown mode of check_sampling strategy", {
   expect_error(check_sampling_strategy(
     factor(c(rep("0", 50), rep("1", 50), rep("2", 1000))),
-    strategy = "some unknown strategy",
-    "not implemented"
-  ))
+    strategy = "some unknown strategy"
+  ), "not implemented")
 })
