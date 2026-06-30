@@ -16,4 +16,5 @@ check_sampling_strategy <- function(y, strategy = "auto") {
     min_count <- count[names(count) == min_names]
     return(max_value - min_count)
   }
+  stop(sprintf("strategy %s not implemented", strategy))
 }

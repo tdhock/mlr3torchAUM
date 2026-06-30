@@ -17,6 +17,9 @@ test_that("test auto mode of check_sampling strategy", {
     strategy = "auto"
   )
   expect_identical(samp_strategy_multi, c("0" = 950L, "1" = 900L))
+})
+
+test_that("test minority mode of check_sampling strategy", {
   samp_strategy_multi_mino <- check_sampling_strategy(
     factor(c(rep("0", 50), rep("1", 100), rep("2", 1000))),
     strategy = "minority"
@@ -27,4 +30,12 @@ test_that("test auto mode of check_sampling strategy", {
     strategy = "minority"
   )
   expect_identical(samp_strategy_multi_mino2, c("0" = 950L)) # get just one
+})
+
+test_that("test unknown mode of check_sampling strategy", {
+  expect_error(check_sampling_strategy(
+    factor(c(rep("0", 50), rep("1", 50), rep("2", 1000))),
+    strategy = "some unknown strategy",
+    "not implemented"
+  ))
 })
