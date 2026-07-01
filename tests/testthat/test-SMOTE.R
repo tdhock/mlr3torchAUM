@@ -75,3 +75,13 @@ test_that("test make_samples", {
   b <- make_samples(X, nn, 5)
   expect_identical(a, b)
 })
+
+test_that("test fit_resample", {
+  set.seed(1)
+  y <- factor(c(rep("0", 5), rep("1", 20))) # minor: 5; major: 20
+  X <- matrix(rnorm(50), ncol = 2) # 25 samples
+  res <- fit_resample(X, y, strategy = "auto", k = 3) # knn's k = 3
+  expect_equal(nrow(res$X), 40L) # 25 + 15 = 40
+  expect_equal(length(res$y), 40L)
+  expect_equal(as.integer(table(res$y)["0"]), 20L)
+})
