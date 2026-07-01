@@ -18,3 +18,8 @@ check_sampling_strategy <- function(y, strategy = "auto") {
   }
   stop(sprintf("strategy %s not implemented", strategy))
 }
+
+knn_within_class <- function(X, k) {
+  if (nrow(X) < k + 1) stop(sprintf("need at least k+1=%d samples, got %d", k + 1, nrow(X)))
+  return(RANN::nn2(X, X, k = k + 1)$nn.idx[, -1, drop = FALSE])
+}

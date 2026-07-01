@@ -19,7 +19,8 @@ BugReports: https://github.com/mlr3-imbalanced/mlr3torchAUM/issues
 Imports:
     data.table,
     torch, coro, R6,
-    mlr3, mlr3misc, lgr, ggplot2
+    mlr3, mlr3misc, lgr, ggplot2,
+    RANN
 Suggests:
     testthat,
     knitr, markdown,

@@ -38,3 +38,11 @@ test_that("test unknown mode of check_sampling strategy", {
     strategy = "some unknown strategy"
   ), "not implemented")
 })
+
+test_that("test knn_within_class", {
+  X <- matrix(c(0, 0, 1, 0, 5, 0, 6, 0), ncol = 2, byrow = TRUE)
+  knn_ids <- knn_within_class(X, 1)
+  expect_identical(knn_ids, matrix(c(2L, 1L, 4L, 3L), ncol = 1))
+  expect_error(knn_within_class(X, 4), "need at least")
+  expect_error(knn_within_class(X, 1000), "need at least")
+})
