@@ -34,3 +34,10 @@ generate_samples <- function(X, nn, rows, cols, steps) {
   neighs <- X[nn[cbind(rows, cols)], , drop = FALSE]
   return(x + steps * (neighs - x))
 }
+
+make_samples <- function(X, nn, n_samples) {
+  rows <- sample.int(nrow(X), n_samples, replace = TRUE)
+  cols <- sample.int(ncol(nn), n_samples, replace = TRUE)
+  steps <- runif(n_samples, 0, 1)
+  return(generate_samples(X, nn, rows, cols, steps))
+}

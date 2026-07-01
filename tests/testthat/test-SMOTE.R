@@ -62,3 +62,16 @@ test_that("test generate samples", {
   generated_points2 <- generate_samples(X1, nn1, rows = 1, cols = 1, steps = 0.5)
   expect_equal(generated_points2, matrix(c(2), ncol = 1))
 })
+
+test_that("test make_samples", {
+  X <- matrix(c(0, 0, 4, 0, 0, 3), ncol = 2, byrow = TRUE)
+  nn <- knn_within_class(X, 1)
+  set.seed(1)
+  out <- make_samples(X, nn, 5)
+  expect_equal(dim(out), c(5L, 2L))
+  set.seed(1)
+  a <- make_samples(X, nn, 5)
+  set.seed(1)
+  b <- make_samples(X, nn, 5)
+  expect_identical(a, b)
+})
