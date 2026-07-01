@@ -46,3 +46,19 @@ test_that("test knn_within_class", {
   expect_error(knn_within_class(X, 4), "need at least")
   expect_error(knn_within_class(X, 1000), "need at least")
 })
+
+test_that("test generate samples", {
+  X <- matrix(c(0, 0, 4, 0, 0, 3), ncol = 2, byrow = TRUE)
+  nn <- knn_within_class(X, 1) # 3,1,1
+  # nn[1,1] for point1 (0,0) and its first neighbor (0,3), with step 0.5 -> (0,0) + 0.5((0,3)-(0,0)) = (0,1.5)
+  # nn[2,1] for point2 (4,0) and its first neighbor (0,0) with step 0.25 -> (4,0) + 0.25((0,0)-(4,0)) = (3,0)
+  generated_points <- generate_samples(X, nn, rows = c(1, 2), cols = c(1, 1), steps = c(0.5, 0.25))
+  expect_equal(generated_points, matrix(c(0, 1.5, 3, 0), ncol = 2, byrow = TRUE))
+  generated_points1 <- generate_samples(X, nn, rows = 1, cols = 1, steps = 0.5)
+  expect_equal(generated_points1, matrix(c(0, 1.5), nrow = 1))
+  X1 <- matrix(c(0, 4, 10), ncol = 1)
+  nn1 <- knn_within_class(X1, 1)
+  # (0), neighbor (4), (0)+0.5(4-0) = (2)
+  generated_points2 <- generate_samples(X1, nn1, rows = 1, cols = 1, steps = 0.5)
+  expect_equal(generated_points2, matrix(c(2), ncol = 1))
+})
