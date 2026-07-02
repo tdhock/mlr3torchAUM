@@ -29,7 +29,6 @@ generate_samples <- function(X, nn_num, rows, cols, steps, nn_data = X) {
   if (num_neigh != length(cols) || num_neigh != length(steps)) stop("rows, cols and steps not consistent")
   if (any(rows > nrow(X))) stop("illegal row number")
   if (any(cols > ncol(nn_num))) stop("illegal col number")
-  if (any(steps > 1 | steps < 0)) stop("illegal step")
   x <- X[rows, , drop = FALSE]
   neighs <- nn_data[nn_num[cbind(rows, cols)], , drop = FALSE]
   return(x + steps * (neighs - x))
