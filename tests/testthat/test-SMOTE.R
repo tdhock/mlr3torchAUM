@@ -1,5 +1,4 @@
 library(testthat)
-data.table::setDTthreads(1L)
 
 test_that("test helper function count class", {
   count_result <- count_class(factor(c(rep("0", 100), rep("1", 900))))
@@ -84,4 +83,11 @@ test_that("test fit_resample", {
   expect_equal(nrow(res$X), 40L) # 25 + 15 = 40
   expect_equal(length(res$y), 40L)
   expect_equal(as.integer(table(res$y)["0"]), 20L)
+})
+
+test_that("test BaseSMOTE", {
+  y <- factor(c(rep("0", 5), rep("1", 20))) # minor: 5; major: 20
+  X <- matrix(rnorm(50), ncol = 2) # 25 samples
+  sampler <- BaseSMOTE$new()
+  expect_error(sampler$fit_resample(X, y), "not implemented")
 })

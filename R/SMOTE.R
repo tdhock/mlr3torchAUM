@@ -61,3 +61,19 @@ fit_resample <- function(X, y, strategy = "auto", k = 5) {
     )
   ))
 }
+
+BaseSMOTE <- R6::R6Class(
+  "BaseSMOTE",
+  inherit = BaseOverSampler,
+  public = list(
+    k = NULL,
+    initialize = function(sample_strategy = "auto", k = 5) {
+      super$initialize(sample_strategy)
+      self$k <- k
+    }
+  ),
+  private = list(
+    .knn = function(X_within_class) knn_within_class(X_within_class, self$k),
+    .make_samples = function(X, nn, n_to_generate) make_samples(X, nn, n_to_generate)
+  )
+)
