@@ -42,10 +42,10 @@ make_samples <- function(X, nn, n_to_generate) {
   return(generate_samples(X, nn, rows, cols, steps))
 }
 
-fit_resample <- function(X, y, strategy = "auto", k = 5) {
+fit_resample <- function(X, y, sample_strategy = "auto", k = 5) {
   n_samples <- nrow(X)
   if (n_samples != length(y)) stop("data and label not consistent")
-  sampling_strategy <- check_sampling_strategy(y, strategy)
+  sampling_strategy <- check_sampling_strategy(y, sample_strategy)
   sampling_strategy <- sampling_strategy[sampling_strategy > 0]
   results <- lapply(names(sampling_strategy), function(class_name) {
     n_to_generate <- sampling_strategy[[class_name]]
@@ -75,5 +75,31 @@ BaseSMOTE <- R6::R6Class(
   private = list(
     .knn = function(X_within_class) knn_within_class(X_within_class, self$k),
     .make_samples = function(X, nn, n_to_generate) make_samples(X, nn, n_to_generate)
+  )
+)
+
+SMOTE <- R6::R6Class(
+  "SMOTE",
+  inherit = BaseSMOTE,
+  private = list(
+    .fit_resample = function(X, y) {
+      n_samples <- nrow(X)
+      if (n_samples != length(y)) stop("data and label not consistent")
+      sampling_strategy <- check_sampling_strategy(y, self$sample_strategy)
+      sampling_strategy <- sampling_strategy[sampling_strategy > 0]
+      results <- lapply(names(sampling_strategy), function(class_name) {
+        n_to_generate <- sampling_strategy[[class_name]]
+        X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
+        nn <- private$.knn(X_within_class)
+        generated <- private$.make_samples(X_within_class, nn, n_to_generate)
+        return(list(X = generated, y = rep(class_name, n_to_generate)))
+      })
+      return(list(
+        X = do.call(rbind, c(list(X), lapply(results, function(result) result$X))),
+        y = factor(c(as.character(y), unlist(lapply(results, function(result) result$y))),
+          levels = levels(y)
+        )
+      ))
+    }
   )
 )
