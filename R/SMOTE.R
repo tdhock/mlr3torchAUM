@@ -42,15 +42,15 @@ make_samples <- function(X, nn, n_to_generate) {
   return(generate_samples(X, nn, rows, cols, steps))
 }
 
-fit_resample <- function(X, y, sample_strategy = "auto", k = 5) {
+fit_resample <- function(X, y, sampling_strategy = "auto", k_neighbors = 5) {
   n_samples <- nrow(X)
   if (n_samples != length(y)) stop("data and label not consistent")
-  sampling_strategy <- check_sampling_strategy(y, sample_strategy)
+  sampling_strategy <- check_sampling_strategy(y, sampling_strategy)
   sampling_strategy <- sampling_strategy[sampling_strategy > 0]
   results <- lapply(names(sampling_strategy), function(class_name) {
     n_to_generate <- sampling_strategy[[class_name]]
     X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
-    nn <- knn_within_class(X_within_class, k)
+    nn <- knn_within_class(X_within_class, k_neighbors)
     generated <- make_samples(X_within_class, nn, n_to_generate)
     return(list(X = generated, y = rep(class_name, n_to_generate)))
   })
@@ -66,14 +66,14 @@ BaseSMOTE <- R6::R6Class(
   "BaseSMOTE",
   inherit = BaseOverSampler,
   public = list(
-    k = NULL,
-    initialize = function(sample_strategy = "auto", k = 5) {
-      super$initialize(sample_strategy)
-      self$k <- k
+    k_neighbors = NULL,
+    initialize = function(sampling_strategy = "auto", k_neighbors = 5) {
+      super$initialize(sampling_strategy)
+      self$k_neighbors <- k_neighbors
     }
   ),
   private = list(
-    .knn = function(X_within_class) knn_within_class(X_within_class, self$k),
+    .knn = function(X_within_class) knn_within_class(X_within_class, self$k_neighbors),
     .make_samples = function(X, nn, n_to_generate) make_samples(X, nn, n_to_generate)
   )
 )
@@ -85,7 +85,7 @@ SMOTE <- R6::R6Class(
     .fit_resample = function(X, y) {
       n_samples <- nrow(X)
       if (n_samples != length(y)) stop("data and label not consistent")
-      sampling_strategy <- check_sampling_strategy(y, self$sample_strategy)
+      sampling_strategy <- check_sampling_strategy(y, self$sampling_strategy)
       sampling_strategy <- sampling_strategy[sampling_strategy > 0]
       results <- lapply(names(sampling_strategy), function(class_name) {
         n_to_generate <- sampling_strategy[[class_name]]

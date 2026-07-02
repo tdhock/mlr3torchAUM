@@ -11,15 +11,15 @@
 }
 \format{
   An \code{\link[R6:R6Class]{R6}} class. Create an instance with
-  \code{SMOTE$new(sample_strategy = "auto", k = 5)}:
+  \code{SMOTE$new(sampling_strategy = "auto", k_neighbors= 5)}:
   \itemize{
-    \item \code{sample_strategy} A string field defining samples of 
+    \item \code{sampling_strategy} A string field defining samples of 
     which classes should be synthesized. \code{"auto"}
     over-samples every non-majority class up to 
     the size of the majority class. Default; \code{"minority"}
     over-samples only the smallest class.
     Only one class will be selected.
-    \item \code{k} The hyperparameter \code{k} for knn algorithm.
+    \item \code{k_neighbors} The hyperparameter \code{k} for knn algorithm.
   }
   
   After creation, call the \code{fit_resample(X, y)} method:
@@ -43,7 +43,7 @@ set.seed(1)
 ## 10 positive vs 40 negative
 y <- factor(c(rep("positive", 10), rep("negative", 40)))
 X <- matrix(rnorm(100), ncol = 2) # 50 samples, each two features
-sampler <- mlr3torchAUM::SMOTE$new(sample_strategy = "auto", k = 5)
+sampler <- mlr3torchAUM::SMOTE$new(sampling_strategy = "auto", k_neighbors= 5)
 res <- sampler$fit_resample(X, y)
 nrow(res$X)   # 50 original + 30 synthetic = 80
 table(res$y)  # balanced: positive = 40, negative = 40

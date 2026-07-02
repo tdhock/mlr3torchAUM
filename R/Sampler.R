@@ -1,8 +1,8 @@
 BaseSampler <- R6::R6Class(
   "BaseSampler",
   public = list(
-    sample_strategy = NULL,
-    initialize = function(sample_strategy = "auto") self$sample_strategy <- sample_strategy,
+    sampling_strategy = NULL,
+    initialize = function(sampling_strategy = "auto") self$sampling_strategy <- sampling_strategy,
     fit_resample = function(X, y) private$.fit_resample(X, y)
   ),
   private = list(
