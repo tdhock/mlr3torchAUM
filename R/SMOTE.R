@@ -42,26 +42,6 @@ make_samples <- function(X, nn, n_to_generate) {
   return(generate_samples(X, nn, rows, cols, steps))
 }
 
-fit_resample <- function(X, y, sampling_strategy = "auto", k_neighbors = 5) {
-  n_samples <- nrow(X)
-  if (n_samples != length(y)) stop("data and label not consistent")
-  sampling_strategy <- check_sampling_strategy(y, sampling_strategy)
-  sampling_strategy <- sampling_strategy[sampling_strategy > 0]
-  results <- lapply(names(sampling_strategy), function(class_name) {
-    n_to_generate <- sampling_strategy[[class_name]]
-    X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
-    nn <- knn_within_class(X_within_class, k_neighbors)
-    generated <- make_samples(X_within_class, nn, n_to_generate)
-    return(list(X = generated, y = rep(class_name, n_to_generate)))
-  })
-  return(list(
-    X = do.call(rbind, c(list(X), lapply(results, function(result) result$X))),
-    y = factor(c(as.character(y), unlist(lapply(results, function(result) result$y))),
-      levels = levels(y)
-    )
-  ))
-}
-
 BaseSMOTE <- R6::R6Class(
   "BaseSMOTE",
   inherit = BaseOverSampler,

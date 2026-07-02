@@ -75,16 +75,6 @@ test_that("test make_samples", {
   expect_identical(a, b)
 })
 
-test_that("test fit_resample", {
-  set.seed(1)
-  y <- factor(c(rep("0", 5), rep("1", 20))) # minor: 5; major: 20
-  X <- matrix(rnorm(50), ncol = 2) # 25 samples
-  res <- fit_resample(X, y, sampling_strategy = "auto", k_neighbors = 3) # knn's k = 3
-  expect_equal(nrow(res$X), 40L) # 25 + 15 = 40
-  expect_equal(length(res$y), 40L)
-  expect_equal(as.integer(table(res$y)["0"]), 20L)
-})
-
 test_that("test BaseSMOTE", {
   y <- factor(c(rep("0", 5), rep("1", 20))) # minor: 5; major: 20
   X <- matrix(rnorm(50), ncol = 2) # 25 samples
@@ -97,8 +87,8 @@ test_that("test SMOTE", {
   X <- matrix(rnorm(50), ncol = 2) # 25 samples
   sampler <- SMOTE$new(sampling_strategy = "auto", k_neighbors = 3)
   set.seed(1)
-  res1 <- sampler$fit_resample(X, y)
-  set.seed(1)
-  res2 <- fit_resample(X, y, sampling_strategy = "auto", k_neighbors = 3)
-  expect_equal(res1, res2)
+  res <- sampler$fit_resample(X, y)
+  expect_equal(nrow(res$X), 40L) # 25 + 15 = 40
+  expect_equal(length(res$y), 40L)
+  expect_equal(as.integer(table(res$y)["0"]), 20L)
 })
