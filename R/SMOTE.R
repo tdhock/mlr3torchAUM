@@ -83,12 +83,8 @@ SMOTE <- R6::R6Class(
   inherit = BaseSMOTE,
   private = list(
     .fit_resample = function(X, y) {
-      n_samples <- nrow(X)
-      if (n_samples != length(y)) stop("data and label not consistent")
-      sampling_strategy <- check_sampling_strategy(y, self$sampling_strategy)
-      sampling_strategy <- sampling_strategy[sampling_strategy > 0]
-      results <- lapply(names(sampling_strategy), function(class_name) {
-        n_to_generate <- sampling_strategy[[class_name]]
+      results <- lapply(names(self$sampling_strategy_), function(class_name) {
+        n_to_generate <- self$sampling_strategy_[[class_name]]
         X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
         nn <- private$.knn(X_within_class)
         generated <- private$.make_samples(X_within_class, nn, n_to_generate)
