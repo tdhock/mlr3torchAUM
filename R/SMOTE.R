@@ -39,7 +39,7 @@ make_samples <- function(X, nn, n_to_generate, nn_data = X) {
   rows <- sample.int(nrow(X), n_to_generate, replace = TRUE)
   cols <- sample.int(ncol(nn), n_to_generate, replace = TRUE)
   steps <- runif(n_to_generate, 0, 1)
-  return(generate_samples(X, nn, rows, cols, steps, nn_data=nn_data))
+  return(generate_samples(X, nn, rows, cols, steps, nn_data = nn_data))
 }
 
 BaseSMOTE <- R6::R6Class(
@@ -61,7 +61,7 @@ BaseSMOTE <- R6::R6Class(
       }
       self$nn_k_ <- function(X_within_class) knn_within_class(X_within_class, self$k_neighbors)
     },
-    .make_samples = function(X, nn, n_to_generate, nn_data=X) make_samples(X, nn, n_to_generate, nn_data)
+    .make_samples = function(X, nn, n_to_generate, nn_data = X) make_samples(X, nn, n_to_generate, nn_data)
   )
 )
 
