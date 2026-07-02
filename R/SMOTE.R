@@ -67,13 +67,20 @@ BaseSMOTE <- R6::R6Class(
   inherit = BaseOverSampler,
   public = list(
     k_neighbors = NULL,
+    nn_k_ = NULL,
     initialize = function(sampling_strategy = "auto", k_neighbors = 5) {
       super$initialize(sampling_strategy)
       self$k_neighbors <- k_neighbors
     }
   ),
   private = list(
-    .knn = function(X_within_class) knn_within_class(X_within_class, self$k_neighbors),
+    .validate_estimator = function() {
+      if (!is.numeric(self$k_neighbors) || length(self$k_neighbors) != 1 ||
+        self$k_neighbors < 1 || self$k_neighbors != round(self$k_neighbors)) {
+        stop("k_neighbors must be a positive integer")
+      }
+      self$nn_k_ <- function(X_within_class) knn_within_class(X_within_class, self$k_neighbors)
+    },
     .make_samples = function(X, nn, n_to_generate) make_samples(X, nn, n_to_generate)
   )
 )
@@ -83,11 +90,11 @@ SMOTE <- R6::R6Class(
   inherit = BaseSMOTE,
   private = list(
     .fit_resample = function(X, y) {
+      private$.validate_estimator()
       results <- lapply(names(self$sampling_strategy_), function(class_name) {
         n_to_generate <- self$sampling_strategy_[[class_name]]
         X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
-        nn <- private$.knn(X_within_class)
-        generated <- private$.make_samples(X_within_class, nn, n_to_generate)
+        generated <- private$.make_samples(X_within_class, self$nn_k_(X_within_class), n_to_generate)
         return(list(X = generated, y = rep(class_name, n_to_generate)))
       })
       return(list(
