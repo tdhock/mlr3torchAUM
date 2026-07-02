@@ -61,7 +61,7 @@ BaseSMOTE <- R6::R6Class(
       }
       self$nn_k_ <- function(X_within_class) knn_within_class(X_within_class, self$k_neighbors)
     },
-    .make_samples = function(X, nn, n_to_generate) make_samples(X, nn, n_to_generate)
+    .make_samples = function(X, nn, n_to_generate, nn_data=X) make_samples(X, nn, n_to_generate, nn_data)
   )
 )
 
