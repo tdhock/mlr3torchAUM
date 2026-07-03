@@ -75,6 +75,16 @@ test_that("test make_samples", {
   set.seed(1)
   b <- make_samples(X, nn, 5)
   expect_identical(a, b)
+  set.seed(1)
+  a <- make_samples(X, nn, 5)
+  set.seed(1)
+  b <- make_samples(X, nn, 5, step_size = 1)
+  expect_identical(a, b)
+  X <- matrix(c(0, 10), ncol = 1)
+  nn <- knn_index(X, X, 1)
+  set.seed(1)
+  out <- make_samples(X, nn, 20, step_size = -0.5)
+  expect_true(all(out <= 0 | out > 10))
 })
 
 test_that("test BaseSMOTE", {
