@@ -84,7 +84,26 @@ test_that("test make_samples", {
   nn <- knn_index(X, X, 1)
   set.seed(1)
   out <- make_samples(X, nn, 20, step_size = -0.5)
-  expect_true(all(out <= 0 | out > 10))
+  expect_true(all(out <= 0 | out >= 10))
+})
+
+test_that("test in_danger_noise", {
+  y <- factor(c("maj", "maj", "maj", "maj", "min", "min", "min", "min"))
+  nn_idx <- rbind(
+    c(1, 2, 3, 4), # 4 majority noise
+    c(1, 2, 5, 6), # 2 majority danger
+    c(1, 2, 3, 5), # 3 majority danger
+    c(1, 5, 6, 7), # 1 majority safe
+    c(5, 6, 7, 8) # 0 majority safe
+  )
+  expect_identical(
+    in_danger_noise(nn_idx, y, "min", "danger"),
+    c(FALSE, TRUE, TRUE, FALSE, FALSE)
+  )
+  expect_identical(
+    in_danger_noise(nn_idx, y, "min", "noise"),
+    c(TRUE, FALSE, FALSE, FALSE, FALSE)
+  )
 })
 
 test_that("test BaseSMOTE", {

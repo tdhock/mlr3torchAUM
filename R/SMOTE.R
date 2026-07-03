@@ -42,6 +42,16 @@ make_samples <- function(X, nn, n_to_generate, nn_data = X, step_size = 1) {
   return(generate_samples(X, nn, rows, cols, steps, nn_data = nn_data))
 }
 
+in_danger_noise <- function(nn_idx, y, target_class, kind = "danger") {
+  m <- ncol(nn_idx)
+  is_maj <- matrix(as.character(y)[nn_idx] != target_class, nrow = nrow(nn_idx))
+  n_maj <- rowSums(is_maj)
+  if (kind == "danger") {
+    return(n_maj >= m / 2 & n_maj < m)
+  }
+  return(n_maj == m)
+}
+
 BaseSMOTE <- R6::R6Class(
   "BaseSMOTE",
   inherit = BaseOverSampler,
