@@ -123,3 +123,22 @@ test_that("test SMOTE", {
   expect_equal(length(res$y), 40L)
   expect_equal(as.integer(table(res$y)["0"]), 20L)
 })
+
+test_that("test SMOTE minority mode multi-class", {
+  y <- factor(c(rep("0", 5), rep("1", 5), rep("2", 20)))
+  X <- matrix(rnorm(60), ncol = 2)
+  sampler <- SMOTE$new(sampling_strategy = "minority", k_neighbors = 3)
+  res <- sampler$fit_resample(X, y)
+  tbl <- table(res$y)
+  expect_equal(as.integer(tbl["0"]), 20L)
+  expect_equal(as.integer(tbl["1"]), 5L)
+})
+
+test_that("test SMOTE empty class", {
+  y <- factor(c(rep("0", 5), rep("1", 20)), levels = c("0", "1", "2"))
+  X <- matrix(rnorm(50), ncol = 2)
+  sampler <- SMOTE$new(sampling_strategy = "auto", k_neighbors = 3)
+  res <- sampler$fit_resample(X, y)
+  expect_equal(nrow(res$X), 40L)
+  expect_equal(as.integer(table(res$y)["2"]), 0L)
+})
