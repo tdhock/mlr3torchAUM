@@ -38,17 +38,19 @@ test_that("test unknown mode of check_sampling strategy", {
   ), "not implemented")
 })
 
-test_that("test knn_within_class", {
+test_that("test knn_index", {
+  data <- matrix(c(0, 0, 1, 0, 5, 5, 6, 5), nrow = 4, byrow = TRUE) # p1 p2 p3 p4
+  query <- data[c(1, 3), ] # only check p1=(0,0) and p3=(5,5)；query included in data
+  k <- 1
+  expect_identical(knn_index(query, data, 1), matrix(c(2L, 4L), ncol = 1))
   X <- matrix(c(0, 0, 1, 0, 5, 0, 6, 0), ncol = 2, byrow = TRUE)
-  knn_ids <- knn_within_class(X, 1)
-  expect_identical(knn_ids, matrix(c(2L, 1L, 4L, 3L), ncol = 1))
-  expect_error(knn_within_class(X, 4), "need at least")
-  expect_error(knn_within_class(X, 1000), "need at least")
+  expect_identical(knn_index(X, X, 1), matrix(c(2L, 1L, 4L, 3L), ncol = 1))
+  expect_error(knn_index(X, X, 4), "need at least")
 })
 
 test_that("test generate samples", {
   X <- matrix(c(0, 0, 4, 0, 0, 3), ncol = 2, byrow = TRUE)
-  nn <- knn_within_class(X, 1) # 3,1,1
+  nn <- knn_index(X, X, 1) # 3,1,1
   # nn[1,1] for point1 (0,0) and its first neighbor (0,3), with step 0.5 -> (0,0) + 0.5((0,3)-(0,0)) = (0,1.5)
   # nn[2,1] for point2 (4,0) and its first neighbor (0,0) with step 0.25 -> (4,0) + 0.25((0,0)-(4,0)) = (3,0)
   generated_points <- generate_samples(X, nn, rows = c(1, 2), cols = c(1, 1), steps = c(0.5, 0.25))
@@ -56,7 +58,7 @@ test_that("test generate samples", {
   generated_points1 <- generate_samples(X, nn, rows = 1, cols = 1, steps = 0.5)
   expect_equal(generated_points1, matrix(c(0, 1.5), nrow = 1))
   X1 <- matrix(c(0, 4, 10), ncol = 1)
-  nn1 <- knn_within_class(X1, 1)
+  nn1 <- knn_index(X1, X1, 1)
   # (0), neighbor (4), (0)+0.5(4-0) = (2)
   generated_points2 <- generate_samples(X1, nn1, rows = 1, cols = 1, steps = 0.5)
   expect_equal(generated_points2, matrix(c(2), ncol = 1))
@@ -64,7 +66,7 @@ test_that("test generate samples", {
 
 test_that("test make_samples", {
   X <- matrix(c(0, 0, 4, 0, 0, 3), ncol = 2, byrow = TRUE)
-  nn <- knn_within_class(X, 1)
+  nn <- knn_index(X, X, 1)
   set.seed(1)
   out <- make_samples(X, nn, 5)
   expect_equal(dim(out), c(5L, 2L))

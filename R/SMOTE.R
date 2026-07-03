@@ -19,9 +19,10 @@ check_sampling_strategy <- function(y, strategy = "auto") {
   stop(sprintf("strategy %s not implemented", strategy))
 }
 
-knn_within_class <- function(X, k) {
-  if (nrow(X) < k + 1) stop(sprintf("need at least k+1=%d samples, got %d", k + 1, nrow(X)))
-  return(RANN::nn2(X, X, k = k + 1)$nn.idx[, -1, drop = FALSE])
+knn_index <- function(query, data, k) {
+  if (nrow(data) < k + 1) stop(sprintf("need at least k+1=%d samples, got %d", k + 1, nrow(data)))
+  # assume query always included in data
+  return(RANN::nn2(data, query, k = k + 1)$nn.idx[, -1, drop = FALSE])
 }
 
 generate_samples <- function(X, nn_num, rows, cols, steps, nn_data = X) {
@@ -58,7 +59,7 @@ BaseSMOTE <- R6::R6Class(
         self$k_neighbors < 1 || self$k_neighbors != round(self$k_neighbors)) {
         stop("k_neighbors must be a positive integer")
       }
-      self$nn_k_ <- function(X_within_class) knn_within_class(X_within_class, self$k_neighbors)
+      self$nn_k_ <- function(X_within_class) knn_index(X_within_class, X_within_class, self$k_neighbors)
     },
     .make_samples = function(X, nn, n_to_generate, nn_data = X) make_samples(X, nn, n_to_generate, nn_data)
   )
