@@ -45,7 +45,6 @@ SVMSMOTE <- R6::R6Class(
         safe_svs <- minority_svs[!danger_sv_mask]
         X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
         n_to_generate <- self$sampling_strategy_[[class_name]]
-        if (n_to_generate <= 0) next # won't be here
         n_danger <- length(danger_svs)
         n_safe <- length(safe_svs)
         if (n_danger == 0L && n_safe == 0L) {

@@ -48,7 +48,7 @@
   fixes the danger / safe quota in advance, before checking whether either
   batch is empty, so the samples distributed to an empty batch are dropped
   rather than reassigned, in other words, it may generate fewer than the requested number.
-  It also leaves the all-noise case unguarded and spits out an error.
+  For all-noise case it spits out an error.
   Here for more robust implementation and better user experience, we make
   this improvement.
 
