@@ -46,6 +46,9 @@ test_that("test knn_index", {
   X <- matrix(c(0, 0, 1, 0, 5, 0, 6, 0), ncol = 2, byrow = TRUE)
   expect_identical(knn_index(X, X, 1), matrix(c(2L, 1L, 4L, 3L), ncol = 1))
   expect_error(knn_index(X, X, 4), "need at least")
+  # edge case: empty query
+  expect_identical(knn_index(X[integer(0), , drop = FALSE], X, 1), matrix(integer(0), 0L, 1L))
+  expect_identical(knn_index(matrix(numeric(0), 0, 2), matrix(1:4, 2, 2), 1), matrix(integer(0), 0L, 1L))
 })
 
 test_that("test generate samples", {
@@ -85,6 +88,11 @@ test_that("test make_samples", {
   set.seed(1)
   out <- make_samples(X, nn, 20, step_size = -0.5)
   expect_true(all(out <= 0 | out >= 10))
+  # edge case: n_to_generate = 0
+  X0 <- matrix(c(0, 0, 4, 0, 0, 3), ncol = 2, byrow = TRUE)
+  nn0 <- knn_index(X0, X0, 1)
+  expect_identical(make_samples(X0, nn0, 0), X0[integer(0), , drop = FALSE])
+  expect_identical(make_samples(X0[integer(0), , drop = FALSE], nn0[integer(0), , drop = FALSE], 0), X0[integer(0), , drop = FALSE])
 })
 
 test_that("test in_danger_noise", {

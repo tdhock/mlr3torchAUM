@@ -22,6 +22,9 @@ check_sampling_strategy <- function(y, strategy = "auto") {
 
 knn_index <- function(query, data, k) {
   if (nrow(data) < k + 1) stop(sprintf("need at least k+1=%d samples, got %d", k + 1, nrow(data)))
+  if (nrow(query) == 0L) {
+    return(matrix(integer(0), 0L, k))
+  } # remain the matrix shape
   # assume query always included in data
   return(RANN::nn2(data, query, k = k + 1)$nn.idx[, -1, drop = FALSE])
 }
@@ -37,6 +40,9 @@ generate_samples <- function(X, nn_num, rows, cols, steps, nn_data = X) {
 }
 
 make_samples <- function(X, nn, n_to_generate, nn_data = X, step_size = 1) {
+  if (n_to_generate == 0L) {
+    return(X[integer(0), , drop = FALSE])
+  } # remain the matrix shape
   rows <- sample.int(nrow(X), n_to_generate, replace = TRUE)
   cols <- sample.int(ncol(nn), n_to_generate, replace = TRUE)
   steps <- step_size * runif(n_to_generate, 0, 1)
