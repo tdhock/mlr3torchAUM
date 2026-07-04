@@ -45,12 +45,38 @@ SVMSMOTE <- R6::R6Class(
         safe_svs <- minority_svs[!danger_sv_mask]
         X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
         n_to_generate <- self$sampling_strategy_[[class_name]]
-        frac <- stats::rbeta(1, 10, 10)
-        n_gen_danger <- as.integer(frac * (n_to_generate + 1))
-        n_gen_safe <- n_to_generate - n_gen_danger
+        if (n_to_generate <= 0) next # won't be here
+        n_danger <- length(danger_svs)
+        n_safe <- length(safe_svs)
+        if (n_danger == 0L && n_safe == 0L) {
+          warning(sprintf(
+            "SVMSMOTE: all support vectors of class '%s' are noise; generated 0 samples for it.",
+            class_name
+          ))
+          return(list(X = X[integer(0), , drop = FALSE], y = character(0)))
+        }
+        if (n_danger == 0L) {
+          message(sprintf(
+            "SVMSMOTE: class '%s' has no danger support vectors; all %d generated samples come from the safe ones (extrapolation).",
+            class_name, n_to_generate
+          ))
+          n_gen_danger <- 0L
+          n_gen_safe <- n_to_generate
+        } else if (n_safe == 0L) {
+          message(sprintf(
+            "SVMSMOTE: class '%s' has no safe support vectors; all %d generated samples come from the danger ones (interpolation).",
+            class_name, n_to_generate
+          ))
+          n_gen_danger <- n_to_generate
+          n_gen_safe <- 0L
+        } else {
+          frac <- stats::rbeta(1, 10, 10)
+          n_gen_danger <- as.integer(frac * (n_to_generate + 1))
+          n_gen_safe <- n_to_generate - n_gen_danger
+        }
         generated_danger <- X[integer(0), , drop = FALSE]
         generated_safe <- X[integer(0), , drop = FALSE]
-        if (length(danger_svs) > 0L && n_gen_danger > 0L) {
+        if (n_gen_danger > 0L) {
           generated_danger <- private$.make_samples(
             X[danger_svs, , drop = FALSE],
             self$nn_k_(query = X[danger_svs, , drop = FALSE], data = X_within_class),
@@ -58,7 +84,7 @@ SVMSMOTE <- R6::R6Class(
             nn_data = X_within_class
           )
         }
-        if (length(safe_svs) > 0L && n_gen_safe > 0L) {
+        if (n_gen_safe > 0L) {
           generated_safe <- private$.make_samples(
             X[safe_svs, , drop = FALSE],
             self$nn_k_(query = X[safe_svs, , drop = FALSE], data = X_within_class),

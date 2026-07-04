@@ -44,6 +44,13 @@
   generate any new points with a warning message. If not all are noise,
   but either has no safe points or danger points, it will hint the user and
   generate all new samples with the existing genre.
+  In fact, the Python \code{imbalanced-learn} does not behave this way: it
+  fixes the danger / safe quota in advance, before checking whether either
+  batch is empty, so the samples distributed to an empty batch are dropped
+  rather than reassigned, in other words, it may generate fewer than the requested number.
+  It also leaves the all-noise case unguarded and spits out an error.
+  Here for more robust implementation and better user experience, we make
+  this improvement.
 
   \code{SVMSMOTE} inherits from the abstract classes \code{BaseSMOTE},
   \code{BaseOverSampler} and \code{BaseSampler}, identical to the class

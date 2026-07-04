@@ -46,8 +46,44 @@ test_that("edge case: a class whose support vectors are all noise (empty batch)"
   y <- factor(c(rep("maj", 60), rep("min", 2)))
   s <- SVMSMOTE$new("minority", k_neighbors = 1, m_neighbors = 5, out_step = 0.5)
   set.seed(1)
-  res <- s$fit_resample(X, y)
+  expect_warning(
+    res <- s$fit_resample(X, y),
+    "all support vectors.*are noise"
+  )
   expect_true(is.matrix(res$X))
   expect_equal(nrow(res$X), nrow(X)) # all noise, 0 synthetic samples for "min"
   expect_identical(levels(res$y), levels(y))
+})
+
+test_that("edge case: no danger SVs -> whole quota from safe (extrapolation) + message", {
+  skip_if_not_installed("e1071")
+  set.seed(1)
+  Xmaj <- matrix(rnorm(60, 0, 1), 30, 2) + matrix(c(8, 0), 30, 2, byrow = TRUE)
+  Xmin <- matrix(rnorm(30, 0, 0.5), 15, 2)
+  X <- rbind(Xmaj, Xmin)
+  y <- factor(c(rep("maj", 30), rep("min", 15)))
+  s <- SVMSMOTE$new("minority", k_neighbors = 5, m_neighbors = 5, out_step = 0.5)
+  expect_message(
+    res <- s$fit_resample(X, y),
+    "no danger support vectors"
+  )
+  expect_equal(nrow(res$X), nrow(X) + 15L) # 30 - 15 = 15
+  expect_equal(as.integer(table(res$y)["min"]), 30)
+})
+
+test_that("edge case: no safe SVs -> whole quota from danger (interpolation) + message", {
+  skip_if_not_installed("e1071")
+  set.seed(1)
+  Xmaj <- matrix(rnorm(120, 0, 1), 60, 2)
+  ang <- seq(0, 2 * pi, length.out = 13)[1:12]
+  Xmin <- cbind(cos(ang), sin(ang)) * 1.9
+  X <- rbind(Xmaj, Xmin)
+  y <- factor(c(rep("maj", 60), rep("min", 12)))
+  s <- SVMSMOTE$new("minority", k_neighbors = 5, m_neighbors = 5, out_step = 0.5)
+  expect_message(
+    res <- s$fit_resample(X, y),
+    "no safe support vectors"
+  )
+  expect_equal(nrow(res$X), nrow(X) + 48L) # 60 - 12 = 48
+  expect_equal(as.integer(table(res$y)["min"]), 60)
 })
