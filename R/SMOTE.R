@@ -70,7 +70,7 @@ BaseSMOTE <- R6::R6Class(
         self$k_neighbors < 1 || self$k_neighbors != round(self$k_neighbors)) {
         stop("k_neighbors must be a positive integer")
       }
-      self$nn_k_ <- function(X_within_class) knn_index(X_within_class, X_within_class, self$k_neighbors)
+      self$nn_k_ <- function(query, data) knn_index(query, data, self$k_neighbors)
     },
     .make_samples = function(X, nn, n_to_generate, nn_data = X, step_size = 1) make_samples(X, nn, n_to_generate, nn_data, step_size)
   )
@@ -85,7 +85,7 @@ SMOTE <- R6::R6Class(
       results <- lapply(names(self$sampling_strategy_), function(class_name) {
         n_to_generate <- self$sampling_strategy_[[class_name]]
         X_within_class <- X[as.character(y) == class_name, , drop = FALSE]
-        generated <- private$.make_samples(X_within_class, self$nn_k_(X_within_class), n_to_generate)
+        generated <- private$.make_samples(X_within_class, self$nn_k_(X_within_class, X_within_class), n_to_generate)
         return(list(X = generated, y = rep(class_name, n_to_generate)))
       })
       return(list(
