@@ -1,3 +1,6 @@
+Changes in version 2026.7.4
+- SVMSMOTE over-sampler ported from Python imbalanced-learn: trains an SVM (using e1071), based on the minority-class support vectors, discards the noise ones (all neighors are majority) and splits the rest into danger (most but not all neighbors are major, interpolated) and safe (most or all neighbors are minority, extrapolated). Inherit BaseSMOTE.
+
 Changes in version 2026.7.1
 
 - SMOTE over-sampler ported from Python imbalanced-learn. Faithful BaseSampler -> BaseOverSampler -> BaseSMOTE -> SMOTE class hierarchy from imbalanced-learn's design.
