@@ -48,19 +48,26 @@ SVMSMOTE <- R6::R6Class(
         frac <- stats::rbeta(1, 10, 10)
         n_gen_danger <- as.integer(frac * (n_to_generate + 1))
         n_gen_safe <- n_to_generate - n_gen_danger
-        generated_danger <- private$.make_samples(
-          X[danger_svs, , drop = FALSE],
-          self$nn_k_(query = X[danger_svs, , drop = FALSE], data = X_within_class),
-          n_gen_danger,
-          nn_data = X_within_class
-        )
-        generated_safe <- private$.make_samples(
-          X[safe_svs, , drop = FALSE],
-          self$nn_k_(query = X[safe_svs, , drop = FALSE], data = X_within_class),
-          n_gen_safe,
-          nn_data = X_within_class, step_size = -self$out_step
-        )
-        return(list(X = rbind(generated_danger, generated_safe), y = rep(class_name, n_to_generate)))
+        generated_danger <- X[integer(0), , drop = FALSE]
+        generated_safe <- X[integer(0), , drop = FALSE]
+        if (length(danger_svs) > 0L && n_gen_danger > 0L) {
+          generated_danger <- private$.make_samples(
+            X[danger_svs, , drop = FALSE],
+            self$nn_k_(query = X[danger_svs, , drop = FALSE], data = X_within_class),
+            n_gen_danger,
+            nn_data = X_within_class
+          )
+        }
+        if (length(safe_svs) > 0L && n_gen_safe > 0L) {
+          generated_safe <- private$.make_samples(
+            X[safe_svs, , drop = FALSE],
+            self$nn_k_(query = X[safe_svs, , drop = FALSE], data = X_within_class),
+            n_gen_safe,
+            nn_data = X_within_class, step_size = -self$out_step
+          )
+        }
+        generated <- rbind(generated_danger, generated_safe)
+        return(list(X = generated, y = rep(class_name, nrow(generated))))
       })
       return(list(
         X = do.call(rbind, c(list(X), lapply(results, function(result) result$X))),

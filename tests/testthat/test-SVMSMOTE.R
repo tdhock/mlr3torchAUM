@@ -37,3 +37,17 @@ test_that("test SVMSMOTE fit_resample", {
   r2 <- s$fit_resample(X, y)
   expect_identical(r1, r2)
 })
+
+test_that("edge case: a class whose support vectors are all noise (empty batch)", {
+  skip_if_not_installed("e1071")
+  set.seed(1)
+  Xmaj <- rbind(matrix(rnorm(60, 0, 0.5), 30, 2), matrix(rnorm(60, 0, 0.5), 30, 2) + 5)
+  X <- rbind(Xmaj, matrix(c(0, 0, 5, 5), 2, 2, byrow = TRUE))
+  y <- factor(c(rep("maj", 60), rep("min", 2)))
+  s <- SVMSMOTE$new("minority", k_neighbors = 1, m_neighbors = 5, out_step = 0.5)
+  set.seed(1)
+  res <- s$fit_resample(X, y)
+  expect_true(is.matrix(res$X))
+  expect_equal(nrow(res$X), nrow(X)) # all noise, 0 synthetic samples for "min"
+  expect_identical(levels(res$y), levels(y))
+})
