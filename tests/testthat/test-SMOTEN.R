@@ -107,4 +107,26 @@ test_that("test knn_from_distance", {
   ), 4, 2, byrow = TRUE))
   expect_equal(knn_from_distance(D, 3)[, 1], 1:4) # self is always the nearest
   expect_equal(dim(knn_from_distance(D, 3)), c(4L, 3L))
+  # edge case: not enough points in D
+  expect_error(knn_from_distance(matrix(c(0, 1, 1, 0), 2, 2), 4), "need at least")
+})
+
+test_that("test SMOTEN fit_resample", {
+  set.seed(1)
+  X <- cbind(
+    color = sample(c("red", "blue", "green"), 30, replace = TRUE),
+    taste = sample(c("sweet", "salty"), 30, replace = TRUE)
+  )
+  y <- factor(c(rep("min", 8), rep("maj", 22)))
+  s <- SMOTEN$new(sampling_strategy = "minority", k_neighbors = 3)
+  set.seed(1)
+  res <- s$fit_resample(X, y)
+  expect_true(is.matrix(res$X))
+  expect_equal(nrow(res$X), 44L) # 30 + (22 - 8)
+  expect_equal(as.integer(table(res$y)["min"]), 22L) # minority balanced to the majority size
+  expect_true(all(res$X %in% X)) # generated values are valid categories (mode of neighbours)
+  expect_identical(levels(res$y), levels(y))
+  set.seed(1)
+  res2 <- s$fit_resample(X, y)
+  expect_identical(res, res2)
 })

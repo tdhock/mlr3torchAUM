@@ -44,7 +44,33 @@ sample_distances <- function(X, y) {
 }
 
 knn_from_distance <- function(D, k_neighbors) {
+  if (nrow(D) < k_neighbors) stop(sprintf("need at least k=%d samples, got %d", k_neighbors, nrow(D)))
   return(t(apply(D, 1, function(distances_per_sample) {
     order(distances_per_sample)[1:k_neighbors]
   })))
 }
+
+SMOTEN <- R6::R6Class("SMOTEN",
+  inherit = SMOTE,
+  private = list(
+    .fit_resample = function(X, y) {
+      private$.validate_estimator()
+      D_full <- sample_distances(X, y)
+      results <- lapply(names(self$sampling_strategy_), function(class_name) {
+        n_to_generate <- self$sampling_strategy_[[class_name]]
+        within_class_idx <- which(as.character(y) == class_name)
+        D_within_class <- D_full[within_class_idx, within_class_idx, drop = FALSE]
+        nn <- knn_from_distance(D_within_class, self$k_neighbors + 1)
+        X_within_class <- X[within_class_idx, , drop = FALSE]
+        generated <- make_samples_nominal(X_within_class, nn, n_to_generate)
+        list(X = generated, y = rep(class_name, n_to_generate))
+      })
+      list(
+        X = do.call(rbind, c(list(X), lapply(results, function(result) result$X))),
+        y = factor(c(as.character(y), unlist(lapply(results, function(result) result$y))),
+          levels = levels(y)
+        )
+      )
+    }
+  )
+)
