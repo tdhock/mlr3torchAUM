@@ -88,3 +88,23 @@ test_that("test sample_distances", {
   D1 <- sample_distances(X[, 1, drop = FALSE], y)
   expect_equal(unname(D1), unname(feature_value_distances(color, y)[color, color]^2))
 })
+
+test_that("test knn_from_distance", {
+  # small distance matrix (symmetric, diagonal 0)
+  D <- matrix(c(
+    0, 1, 3, 2,
+    1, 0, 2, 4,
+    3, 2, 0, 1,
+    2, 4, 1, 0
+  ), 4, 4, byrow = TRUE)
+  # each row: indices of the k nearest points
+  # including self (distance 0, first col)
+  expect_equal(knn_from_distance(D, 2), matrix(c(
+    1, 2,
+    2, 1,
+    3, 4,
+    4, 3
+  ), 4, 2, byrow = TRUE))
+  expect_equal(knn_from_distance(D, 3)[, 1], 1:4) # self is always the nearest
+  expect_equal(dim(knn_from_distance(D, 3)), c(4L, 3L))
+})

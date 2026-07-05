@@ -42,3 +42,9 @@ sample_distances <- function(X, y) {
     feature_value_distances(features, y)[features, features]^2
   })))
 }
+
+knn_from_distance <- function(D, k_neighbors) {
+  return(t(apply(D, 1, function(distances_per_sample) {
+    order(distances_per_sample)[1:k_neighbors]
+  })))
+}
