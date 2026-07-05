@@ -1,3 +1,7 @@
+Changes in version 2026.7.5
+
+- SMOTEN over-sampler for nominal (categorical) features ported from Python imbalanced-learn. Neighbors are found with the Value Difference Metric (VDM) and new samples are synthesized by per-feature mode (including itself). Inherits SMOTE.
+
 Changes in version 2026.7.1
 
 - SMOTE over-sampler ported from Python imbalanced-learn. Faithful BaseSampler -> BaseOverSampler -> BaseSMOTE -> SMOTE class hierarchy from imbalanced-learn's design.
