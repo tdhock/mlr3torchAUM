@@ -21,3 +21,14 @@ make_samples_nominal <- function(X, nn_indices, n_to_generate) {
     }
   )))
 }
+
+feature_value_distances <- function(features, y) {
+  return(as.matrix(
+    dist(
+      prop.table(
+        table(droplevels(as.factor(features)), y), 1
+      ),
+      method = "manhattan"
+    )
+  ))
+}

@@ -44,3 +44,23 @@ test_that("test make_samples_nominal", {
   # edge case: nn_neighbors rows not consistent
   expect_error(make_samples_nominal(X, nn_indices_one_sample, 3), "not consistent")
 })
+
+test_that("test feature_value_distance", {
+  color <- c("red", "red", "red", "blue", "blue", "green")
+  y <- factor(c(1L, 1L, 0L, 0L, 0L, 1L), levels = c(0, 1))
+  D <- feature_value_distances(color, y)
+  expect_equal(D["red", "blue"], 4 / 3)
+  expect_equal(D["red", "green"], 2 / 3)
+  expect_equal(D["blue", "green"], 2)
+  # edge case: only one color
+  color_one <- rep("red", 6)
+  expect_equal(dim(feature_value_distances(color_one, y)), c(1L, 1L))
+  # edge case: missing class
+  y_missing_class <- factor(c(1L, 1L, 0L, 0L, 0L, 1L), levels = c(0, 1, 2))
+  expect_equal(feature_value_distances(color, y_missing_class), D) # like class 2 not exist
+  # edge case: factor feature with an unused level
+  color_factor <- factor(color, levels = c("red", "blue", "green", "yellow")) # yellow unused
+  D_factor <- feature_value_distances(color_factor, y)
+  expect_false(any(is.nan(D_factor))) # no 0/0 NaN
+  expect_equal(D_factor["red", "blue"], 4 / 3)
+})
