@@ -32,3 +32,13 @@ feature_value_distances <- function(features, y) {
     )
   ))
 }
+
+sample_distances <- function(X, y) {
+  # X must be a character matrix
+  n_samples <- nrow(X)
+  if (length(y) != n_samples) stop("data and label not consistent")
+  return(Reduce("+", lapply(seq_len(ncol(X)), function(column) {
+    features <- X[, column]
+    feature_value_distances(features, y)[features, features]^2
+  })))
+}

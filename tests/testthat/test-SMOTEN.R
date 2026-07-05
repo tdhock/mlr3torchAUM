@@ -64,3 +64,27 @@ test_that("test feature_value_distance", {
   expect_false(any(is.nan(D_factor))) # no 0/0 NaN
   expect_equal(D_factor["red", "blue"], 4 / 3)
 })
+
+test_that("test sample_distances", {
+  color <- c("red", "red", "red", "blue", "blue", "green")
+  taste <- c("sweet", "salty", "sweet", "salty", "sweet", "salty")
+  X <- cbind(color, taste) # 6 x 2 character matrix
+  y <- factor(c(1, 1, 0, 0, 0, 1), levels = c(0, 1))
+  # golden from imbalanced-learn ValueDifferenceMetric.pairwise
+  golden <- matrix(c(
+    0, 4, 0, 20, 16, 8,
+    4, 0, 4, 16, 20, 4,
+    0, 4, 0, 20, 16, 8,
+    20, 16, 20, 0, 4, 36,
+    16, 20, 16, 4, 0, 40,
+    8, 4, 8, 36, 40, 0
+  ), 6, 6, byrow = TRUE) / 9
+  D <- sample_distances(X, y)
+  expect_equal(unname(D), golden) # matches imblearn
+  expect_equal(dim(D), c(6L, 6L))
+  expect_equal(diag(unname(D)), rep(0, 6)) # self-distance = 0
+  expect_equal(unname(D), t(unname(D))) # symmetric
+  # edge case: a single feature
+  D1 <- sample_distances(X[, 1, drop = FALSE], y)
+  expect_equal(unname(D1), unname(feature_value_distances(color, y)[color, color]^2))
+})
