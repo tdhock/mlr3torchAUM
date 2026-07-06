@@ -36,6 +36,16 @@ knn_from_distance <- function(D, k_neighbors) {
   })))
 }
 
+get_feature_wise_mode <- function(neighbors, tie_break = "smallest") {
+  return(apply(neighbors, 2, function(column) {
+    counts <- table(column)
+    if (tie_break == "smallest") {
+      return(names(counts)[which.max(counts)])
+    }
+    sample(names(counts)[counts == max(counts)], 1)
+  }))
+}
+
 generate_samples <- function(X, nn_num, rows, cols, steps, nn_data = X) {
   num_neigh <- length(rows)
   if (num_neigh != length(cols) || num_neigh != length(steps)) stop("rows, cols and steps not consistent")

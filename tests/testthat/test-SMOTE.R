@@ -73,6 +73,36 @@ test_that("test knn_from_distance", {
   expect_error(knn_from_distance(matrix(c(0, 1, 1, 0), 2, 2), 4), "need at least")
 })
 
+test_that("test get_feature_wise_mode", {
+  neighbors <- matrix(c(
+    "red", "red", "red", "blue", # mode: red
+    "sweet", "salty", "sweet", "salty" # tie
+  ), nrow = 4)
+  expect_identical(
+    get_feature_wise_mode(neighbors),
+    c("red", "salty") # dictionary order, salty < sweet
+  )
+  # edge case: only one neighbor
+  neighbors_only_one <- matrix(c("red", "sweet"), nrow = 1)
+  expect_identical(
+    get_feature_wise_mode(neighbors_only_one),
+    c("red", "sweet")
+  )
+  neighbors <- matrix(c(
+    "red", "red", "red", "blue",
+    "sweet", "salty", "sweet", "salty"
+  ), nrow = 4)
+  set.seed(1)
+  res <- get_feature_wise_mode(neighbors, tie_break = "random")
+  expect_identical(res[1], "red")
+  expect_true(res[2] %in% c("salty", "sweet"))
+  set.seed(123)
+  a <- get_feature_wise_mode(neighbors, tie_break = "random")
+  set.seed(123)
+  b <- get_feature_wise_mode(neighbors, tie_break = "random")
+  expect_identical(a, b)
+})
+
 test_that("test generate samples", {
   X <- matrix(c(0, 0, 4, 0, 0, 3), ncol = 2, byrow = TRUE)
   nn <- knn_index(X, X, 1) # 3,1,1
