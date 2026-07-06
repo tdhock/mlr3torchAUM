@@ -41,3 +41,29 @@ test_that("median_std: median of per-column population std (ddof = 0)", {
   expect_equal(median_std(matrix(numeric(0), 0, 1)), 0)
   expect_equal(median_std(matrix(numeric(0), 1, 0)), 0)
 })
+
+test_that("Test smotenc_distances", {
+  cont <- matrix(c(0, 6, 0, 6, 0, 6), ncol = 2)
+  cat <- matrix(c("a", "a", "b", "x", "y", "x"), ncol = 2)
+  D <- smotenc_distances(cont, cat)
+  expect_equal(unname(diag(D)), c(0, 0, 0)) # distance to itself is always 0
+  expect_true(isSymmetric(D))
+  expect_equal(D[1, 2], sqrt((0 - 6)^2 + (6 - 0)^2 + 8 * 1))
+  expect_equal(D[1, 3], sqrt(0 + 8 * 1))
+  expect_equal(D[2, 3], sqrt((6 - 0)^2 + (0 - 6)^2 + 8 * 2))
+  # edge: all categories identical
+  expect_equal(
+    unname(smotenc_distances(cont, matrix("a", 3, 2))),
+    unname(as.matrix(dist(cont)))
+  )
+  # edge: median_std = 0
+  cont0 <- matrix(c(5, 5, 5, 2, 2, 2, 0, 3, 0), ncol = 3)
+  expect_equal(
+    unname(smotenc_distances(cont0, cat)),
+    unname(as.matrix(dist(cont0)))
+  )
+  # edge: single row
+  D1 <- smotenc_distances(matrix(c(1, 2), nrow = 1), matrix("a", nrow = 1))
+  expect_equal(dim(D1), c(1L, 1L))
+  expect_equal(D1[1, 1], 0)
+})

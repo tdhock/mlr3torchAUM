@@ -27,3 +27,14 @@ median_std <- function(X_cont) {
     sqrt(sum((column - mean(column))^2) / length(column))
   }))
 }
+
+
+smotenc_distances <- function(continuous, categorical) {
+  # sqrt of (continuous Euclidean^2 + median_std^2 * category mismatches)
+  med_std <- median_std(continuous)
+  cont_dist_matrix <- as.matrix(dist(continuous))
+  category_mismatches <- Reduce("+", lapply(seq_len(ncol(categorical)), function(col_idx) {
+    outer(categorical[, col_idx], categorical[, col_idx], "!=")
+  }))
+  sqrt(cont_dist_matrix^2 + med_std^2 * category_mismatches)
+}
