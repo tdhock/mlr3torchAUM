@@ -18,3 +18,12 @@ split_features <- function(X, categorical_features = "auto") {
     continuous = as.matrix(X[, continuous_features, drop = FALSE])
   ))
 }
+
+median_std <- function(X_cont) {
+  if (nrow(X_cont) == 0 || ncol(X_cont) == 0) {
+    return(0)
+  }
+  median(apply(X_cont, 2, function(column) {
+    sqrt(sum((column - mean(column))^2) / length(column))
+  }))
+}
