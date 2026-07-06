@@ -43,13 +43,6 @@ sample_distances <- function(X, y) {
   })))
 }
 
-knn_from_distance <- function(D, k_neighbors) {
-  if (nrow(D) < k_neighbors) stop(sprintf("need at least k=%d samples, got %d", k_neighbors, nrow(D)))
-  return(t(apply(D, 1, function(distances_per_sample) {
-    order(distances_per_sample)[1:k_neighbors]
-  })))
-}
-
 SMOTEN <- R6::R6Class("SMOTEN",
   inherit = SMOTE,
   private = list(
