@@ -28,7 +28,6 @@ median_std <- function(X_cont) {
   }))
 }
 
-
 smotenc_distances <- function(continuous, categorical) {
   # sqrt of (continuous Euclidean^2 + median_std^2 * category mismatches)
   med_std <- median_std(continuous)
