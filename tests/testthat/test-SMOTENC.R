@@ -67,3 +67,49 @@ test_that("Test smotenc_distances", {
   expect_equal(dim(D1), c(1L, 1L))
   expect_equal(D1[1, 1], 0)
 })
+
+test_that("test make_samples_nc", {
+  # 4 points 4 features: 2 cont, 2 categorical
+  cont <- matrix(c(0, 0, 10, 0, 0, 10, 10, 10), ncol = 2, byrow = TRUE)
+  cat <- matrix(c("a", "x", "a", "y", "b", "x", "b", "y"), ncol = 2, byrow = TRUE)
+  nn <- rbind(c(2, 3), c(1, 4), c(1, 4), c(2, 3))
+  set.seed(1)
+  res <- make_samples_nc(cont, cat, nn, n_to_generate = 6)
+  expect_equal(dim(res$continuous), c(6L, 2L))
+  expect_equal(dim(res$categorical), c(6L, 2L))
+  expect_true(is.numeric(res$continuous))
+  expect_true(is.character(res$categorical))
+  set.seed(1)
+  res2 <- make_samples_nc(cont, cat, nn, 6)
+  expect_identical(res, res2)
+  expect_true(all(res$categorical[, 1] %in% c("a", "b")))
+  expect_true(all(res$categorical[, 2] %in% c("x", "y")))
+  cont_only_one_f <- matrix(c(0, 10, 0, 10), ncol = 1)
+  cat_only_one_f <- matrix(rep(c("cat", "dog"), each = 4), ncol = 2)
+  set.seed(42)
+  res_only_one_f <- make_samples_nc(cont_only_one_f, cat_only_one_f, nn, n_to_generate = 5)
+  expect_equal(dim(res_only_one_f$categorical), c(5L, 2L)) # 5 points, two categorical features
+  # each categorical feature only has one value in neighbors, fixed
+  expect_true(all(res_only_one_f$categorical[, 1] == "cat"))
+  expect_true(all(res_only_one_f$categorical[, 2] == "dog"))
+  # edge case: n_to_generate = 0
+  zero <- make_samples_nc(cont, cat, nn, 0)
+  expect_equal(dim(zero$continuous), c(0L, 2L))
+  expect_equal(dim(zero$categorical), c(0L, 2L))
+  # edge case: single categorical feature
+  cont_single <- matrix(c(0, 0, 10, 0, 0, 10), ncol = 2, byrow = TRUE)
+  nn_single <- rbind(c(2, 3), c(1, 3), c(1, 2))
+  cat_single <- matrix(c("a", "a", "b"), ncol = 1)
+  set.seed(1)
+  r_single <- make_samples_nc(cont_single, cat_single, nn_single, 4)
+  expect_equal(dim(r_single$categorical), c(4L, 1L))
+  # mode must be over ALL k neighbours, not just the first one:
+  # every point's 3 neighbours are (a, b, b) -> mode "b"; grabbing only the first
+  # neighbour (the nn_idx[row] vs nn_idx[row, ] slip) would wrongly give "a"
+  cont_maj <- matrix(1:5, ncol = 1)
+  cat_maj <- matrix(c("a", "b", "b", "b", "a"), ncol = 1)
+  nn_maj <- rbind(c(5, 2, 3), c(1, 3, 4), c(1, 2, 4), c(5, 2, 3), c(1, 2, 3))
+  set.seed(1)
+  r_maj <- make_samples_nc(cont_maj, cat_maj, nn_maj, 8)
+  expect_true(all(r_maj$categorical[, 1] == "b"))
+})
