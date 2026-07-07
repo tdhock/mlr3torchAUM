@@ -41,8 +41,6 @@ smotenc_distances <- function(continuous, categorical) {
 make_samples_nc <- function(continuous, categorical, nn_idx, n_to_generate) {
   n_samples <- nrow(continuous)
   if (n_samples != nrow(categorical) || n_samples != nrow(nn_idx)) stop("data dimension not consistent")
-  num_cont_feat <- ncol(continuous)
-  num_cat_feat <- ncol(categorical)
   if (n_to_generate < 1) {
     return(
       list(
