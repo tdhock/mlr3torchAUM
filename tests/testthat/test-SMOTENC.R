@@ -103,13 +103,40 @@ test_that("test make_samples_nc", {
   set.seed(1)
   r_single <- make_samples_nc(cont_single, cat_single, nn_single, 4)
   expect_equal(dim(r_single$categorical), c(4L, 1L))
-  # mode must be over ALL k neighbours, not just the first one:
-  # every point's 3 neighbours are (a, b, b) -> mode "b"; grabbing only the first
-  # neighbour (the nn_idx[row] vs nn_idx[row, ] slip) would wrongly give "a"
   cont_maj <- matrix(1:5, ncol = 1)
   cat_maj <- matrix(c("a", "b", "b", "b", "a"), ncol = 1)
   nn_maj <- rbind(c(5, 2, 3), c(1, 3, 4), c(1, 2, 4), c(5, 2, 3), c(1, 2, 3))
   set.seed(1)
   r_maj <- make_samples_nc(cont_maj, cat_maj, nn_maj, 8)
   expect_true(all(r_maj$categorical[, 1] == "b"))
+})
+
+test_that("SMOTENC fit_resample: class balance + mixed-type output", {
+  set.seed(1)
+  # imbalanced: 5 minority vs 15 majority
+  # 2 continuous (height, weight) + 2 categorical (color, taste)
+  X <- data.frame(
+    height = c(rnorm(5, 190, 5), rnorm(15, 170, 5)),
+    color = c(sample(c("r", "b"), 5, TRUE), sample(c("r", "b"), 15, TRUE)),
+    weight = c(rnorm(5, 90, 5), rnorm(15, 70, 5)),
+    taste = c(sample(c("s", "p"), 5, TRUE), sample(c("s", "p"), 15, TRUE)),
+    stringsAsFactors = FALSE
+  )
+  y <- factor(c(rep("min", 5), rep("maj", 15)))
+  sampler <- SMOTENC$new(categorical_features = c(2, 4), sampling_strategy = "auto", k_neighbors = 3)
+  res <- sampler$fit_resample(X, y)
+  expect_equal(as.integer(table(res$y)["min"]), 15L)
+  expect_equal(as.integer(table(res$y)["maj"]), 15L)
+  expect_true(is.data.frame(res$X))
+  expect_equal(colnames(res$X), colnames(X))
+  expect_true(is.numeric(res$X$height))
+  expect_true(is.numeric(res$X$weight))
+  expect_true(is.character(res$X$color))
+  expect_true(is.character(res$X$taste))
+  expect_equal(nrow(res$X), 30L)
+  expect_equal(length(res$y), 30L)
+  # first nrow(X) of the result are original
+  expect_equal(res$X$height[seq_len(nrow(X))], X$height)
+  expect_equal(res$X$color[seq_len(nrow(X))], X$color)
+  expect_equal(as.character(res$y)[seq_len(nrow(X))], as.character(y))
 })
