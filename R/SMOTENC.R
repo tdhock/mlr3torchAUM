@@ -37,3 +37,27 @@ smotenc_distances <- function(continuous, categorical) {
   }))
   sqrt(cont_dist_matrix^2 + med_std^2 * category_mismatches)
 }
+
+make_samples_nc <- function(continuous, categorical, nn_idx, n_to_generate) {
+  n_samples <- nrow(continuous)
+  if (n_samples != nrow(categorical) || n_samples != nrow(nn_idx)) stop("data dimension not consistent")
+  num_cont_feat <- ncol(continuous)
+  num_cat_feat <- ncol(categorical)
+  if (n_to_generate < 1) {
+    return(
+      list(
+        continuous = continuous[integer(0), , drop = FALSE],
+        categorical = categorical[integer(0), , drop = FALSE]
+      )
+    )
+  }
+  rows <- sample.int(n_samples, n_to_generate, replace = TRUE)
+  cols <- sample.int(ncol(nn_idx), n_to_generate, replace = TRUE)
+  steps <- runif(n_to_generate, 0, 1)
+  generated_cont <- generate_samples(continuous, nn_idx, rows, cols, steps)
+  generated_cat <- do.call(rbind, lapply(rows, function(row_num) {
+    neighbors <- categorical[nn_idx[row_num, ], , drop = FALSE]
+    get_feature_wise_mode(neighbors, tie_break = "random")
+  }))
+  list(continuous = generated_cont, categorical = generated_cat)
+}
