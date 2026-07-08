@@ -1,10 +1,3 @@
-get_feature_wise_mode <- function(neighbors) {
-  return(apply(neighbors, 2, function(column) {
-    counts <- table(column)
-    names(counts)[which.max(counts)]
-  }))
-}
-
 make_samples_nominal <- function(X, nn_indices, n_to_generate) {
   # n_to_generate > 0
   n_samples <- nrow(X)
