@@ -59,3 +59,39 @@ make_samples_nc <- function(continuous, categorical, nn_idx, n_to_generate) {
   }))
   list(continuous = generated_cont, categorical = generated_cat)
 }
+
+SMOTENC <- R6::R6Class(
+  "SMOTENC",
+  inherit = SMOTE,
+  public = list(
+    categorical_features = NULL,
+    initialize = function(sampling_strategy = "auto", k_neighbors = 5, categorical_features = "auto") {
+      super$initialize(sampling_strategy = sampling_strategy, k_neighbors = k_neighbors)
+      self$categorical_features <- categorical_features
+    }
+  ),
+  private = list(
+    .fit_resample = function(X, y) {
+      private$.validate_estimator()
+      splitted_features <- split_features(X, self$categorical_features)
+      results <- lapply(names(self$sampling_strategy_), function(class_name) {
+        n_to_generate <- self$sampling_strategy_[[class_name]]
+        in_class_indices <- as.character(y) == class_name
+        X_within_class_cont <- splitted_features$continuous[in_class_indices, , drop = FALSE]
+        X_within_class_cat <- splitted_features$categorical[in_class_indices, , drop = FALSE]
+        nn_idx <- knn_from_distance(smotenc_distances(X_within_class_cont, X_within_class_cat), self$k_neighbors + 1)[, -1, drop = FALSE]
+        generated <- make_samples_nc(X_within_class_cont, X_within_class_cat, nn_idx, n_to_generate)
+        return(list(
+          X = data.frame(generated$continuous, generated$categorical)[, colnames(X)], # assembly and reorder the cols
+          y = rep(class_name, n_to_generate)
+        ))
+      })
+      return(list(
+        X = do.call(rbind, c(list(X), lapply(results, function(result) result$X))),
+        y = factor(c(as.character(y), unlist(lapply(results, function(result) result$y))),
+          levels = levels(y)
+        )
+      ))
+    }
+  )
+)
