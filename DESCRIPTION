@@ -1,7 +1,7 @@
 Package: mlr3torchAUM
 Type: Package
 Title: Area Under the Minimum Learning for 'mlr3torch' Framework
-Version: 2026.7.1
+Version: 2026.7.7
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
