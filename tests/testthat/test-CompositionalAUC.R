@@ -123,4 +123,26 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(loss_fn$b), 0.012500000186264515, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn$alpha), 0.19675001502037048, tolerance = 1e-6)
   })
+
+  test_that("test pdsca_pass", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
+    target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    loss_fn <- nn_CompositionalAUC_loss()
+    pass_wanted1 <- c("ce", "aucm", "ce", "aucm")
+    ce_val <- 0.47228795289993286
+    aucm_val <- 0.11656250804662704
+    val_wanted1 <- c(ce_val, aucm_val, ce_val, aucm_val)
+    for (i in 1:4) {
+      loss <- loss_fn(pred, target)
+      expect_equal(pdsca_pass(loss_fn), pass_wanted1[i])
+      expect_equal(as.numeric(loss), val_wanted1[i],tolerance = 1e-6)
+    }
+    loss_fn2 <- nn_CompositionalAUC_loss(k = 2)
+    pass_wanted2 <- c("ce", "ce", "aucm", "aucm")
+    for (i in 1:4) {
+      loss <- loss_fn2(pred, target)
+      expect_equal(pdsca_pass(loss_fn2), pass_wanted2[i])
+    }
+  })
 }

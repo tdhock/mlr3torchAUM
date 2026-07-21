@@ -13,3 +13,7 @@ pdsca_step <- function(
   }
   return(list(state_a = state_a, state_b = state_b))
 }
+
+pdsca_pass <- function(loss_fn){
+  if(is_ce_step(loss_fn$step$item()-1L, loss_fn$k)) "ce" else "aucm"
+}
