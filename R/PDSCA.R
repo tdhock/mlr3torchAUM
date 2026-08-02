@@ -34,6 +34,10 @@ make_pdsca_callback <- function(
       )
       state_a <<- res$state_a
       state_b <<- res$state_b
+    },
+    on_begin = function() {
+      lrs <- sapply(self$ctx$optimizer$param_groups, function(g) g$lr)
+      if(any(lrs != 0)) stop("lr of t_opt should be 0")
     }
   )
 }

@@ -173,4 +173,19 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(loss_fn$b), 0.012500000186264515, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn$alpha), 0.19675001502037048, tolerance = 1e-6)
   })
+
+  test_that("make_pdsca_callback on_begin guard for lr", {
+    skip_on_cran()
+    cb <- make_pdsca_callback(
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, momentum = 0.999
+    )
+    expect_true(inherits(cb, "TorchCallback"))
+    cb_inst <- cb$generate()
+    cb_inst$ctx <- list(optimizer = list(param_groups = list(list(lr = 0.1))))
+    expect_error(cb_inst$on_begin(), regexp = "lr")
+    expect_error(cb_inst$on_begin(), regexp = "t_opt")
+    cb_inst$ctx <- list(optimizer = list(param_groups = list(list(lr = 0))))
+    expect_no_error(cb_inst$on_begin())
+  })
 }
