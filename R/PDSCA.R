@@ -18,6 +18,10 @@ pdsca_pass <- function(loss_fn) {
   if (is_ce_step(loss_fn$step$item() - 1L, loss_fn$k)) "ce" else "aucm"
 }
 
+pdsca_buffer_weight_momentum <- function(p, buffer, weight_momentum) {
+  return((1 - weight_momentum) * buffer + weight_momentum * p)
+}
+
 make_pdsca_callback <- function(
   lr, clamp_value, weight_decay,
   epoch_decay, momentum, decay_factor

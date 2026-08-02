@@ -173,4 +173,22 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(loss_fn$b), 0.012500000186264515, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn$alpha), 0.19675001502037048, tolerance = 1e-6)
   })
+
+  test_that("test pdsca_buffer_weight_momentum", {
+    skip_on_cran()
+    buffer <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    p <- torch::torch_tensor(c(3, 4), dtype = torch::torch_float32())
+    weight_momentum <- 0.25
+    expect_equal(
+      as.numeric(pdsca_buffer_weight_momentum(p, buffer, weight_momentum)),
+      c(1.5, 2.5),
+      tolerance = 1e-6
+    )
+    weight_momentum2 <- 0.99
+    expect_equal(
+      as.numeric(pdsca_buffer_weight_momentum(p, buffer, weight_momentum2)),
+      c(2.98, 3.98),
+      tolerance = 1e-6
+    ) # bigger weight_momentum, less smoother
+  })
 }
