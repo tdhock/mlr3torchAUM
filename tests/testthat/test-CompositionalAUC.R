@@ -136,7 +136,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     for (i in 1:4) {
       loss <- loss_fn(pred, target)
       expect_equal(pdsca_pass(loss_fn), pass_wanted1[i])
-      expect_equal(as.numeric(loss), val_wanted1[i],tolerance = 1e-6)
+      expect_equal(as.numeric(loss), val_wanted1[i], tolerance = 1e-6)
     }
     loss_fn2 <- nn_CompositionalAUC_loss(k = 2)
     pass_wanted2 <- c("ce", "ce", "aucm", "aucm")
@@ -144,5 +144,33 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       loss <- loss_fn2(pred, target)
       expect_equal(pdsca_pass(loss_fn2), pass_wanted2[i])
     }
+  })
+
+  test_that("make_pdsca_callback deals a/b/alpha correctly with pass", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    cb <- make_pdsca_callback(
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, momentum = 0.999
+    )
+    expect_true(inherits(cb, "TorchCallback"))
+    cb_inst <- cb$generate()
+    loss_fn <- nn_CompositionalAUC_loss()
+    cb_inst$ctx <- list(loss_fn = loss_fn)
+    loss_ce <- loss_fn(pred, target)
+    loss_ce$backward()
+    cb_inst$on_after_backward()
+    expect_equal(as.numeric(loss_fn$a), 0, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b), 0, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha), 0, tolerance = 1e-6)
+    loss_aucm <- loss_fn(pred, target)
+    loss_aucm$backward()
+    cb_inst$on_after_backward()
+    expect_equal(as.numeric(loss_fn$a), 0.028750000521540642, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b), 0.012500000186264515, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha), 0.19675001502037048, tolerance = 1e-6)
   })
 }
