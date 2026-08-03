@@ -191,4 +191,40 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       tolerance = 1e-6
     ) # bigger weight_momentum, less smoother
   })
+
+  test_that("test pdsca_ce_weight_step", {
+    skip_on_cran()
+    w <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    grad <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    # python LibAUC:
+    # w = torch.tensor([0.3,-0.2], requires_grad=True)
+    # opt = PDSCA([w], loss_fn, lr=0.1, lr0=0.05, beta1=0.99, beta2=0.999,
+    #             weight_decay=0.0, epoch_decay=0.0, clip_value=10.0, device='cpu')
+    # each step: loss_fn.alpha.grad = None  # force CE branch
+    # (w * torch.tensor([1.,2.])).sum().backward()
+    # opt.step()
+    expected <- list(
+      c(0.25, -0.30000001192092896),
+      c(0.2004999965429306, -0.39899998903274536),
+      c(0.1509999930858612, -0.49799999594688416),
+      c(0.1014999970793724, -0.597000002861023)
+    )
+    buffer <- NULL
+    for (t in seq_along(expected)) {
+      buffer <- pdsca_ce_weight_step(
+        w, grad,
+        lr0 = 0.05, clamp_value = 10, weight_decay = 0,
+        epoch_decay = 0, model_ref = 0,
+        weight_momentum = 0.99, buffer = buffer
+      )
+      expect_equal(as.numeric(w), expected[[t]], tolerance = 1e-6)
+    }
+    w2 <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    buffer2 <- NULL
+    buffer2 <- pdsca_ce_weight_step(w2, grad, 0.05, 10, 0, 0, 0, 0.99, buffer2)
+    expect_equal(as.numeric(w2), c(0.3, -0.2) - 0.05 * c(1, 2), tolerance = 1e-6) # t=0
+    before <- as.numeric(w2)
+    buffer2 <- pdsca_ce_weight_step(w2, grad, 0.05, 10, 0, 0, 0, 0.99, buffer2)
+    expect_equal(as.numeric(w2), before - 0.99 * 0.05 * c(1, 2), tolerance = 1e-6) # t=1
+  })
 }

@@ -22,6 +22,22 @@ pdsca_buffer_weight_momentum <- function(p, buffer, weight_momentum) {
   return((1 - weight_momentum) * buffer + weight_momentum * p)
 }
 
+pdsca_ce_weight_step <- function(p, grad,
+                                 lr0, clamp_value, weight_decay,
+                                 epoch_decay, model_ref, weight_momentum, buffer) {
+  torch::with_no_grad({
+    dp <- pesg_d_p(grad, p, clamp_value, weight_decay, epoch_decay, model_ref)
+    p$sub_(lr0 * dp)
+    if (is.null(buffer)) {
+      buffer_new <- p$clone()
+    } else {
+      buffer_new <- pdsca_buffer_weight_momentum(p, buffer, weight_momentum)
+    }
+    p$copy_(buffer_new)
+  })
+  return(buffer_new)
+}
+
 make_pdsca_callback <- function(
   lr, clamp_value, weight_decay,
   epoch_decay, momentum, decay_factor
