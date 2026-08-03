@@ -227,4 +227,39 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     buffer2 <- pdsca_ce_weight_step(w2, grad, 0.05, 10, 0, 0, 0, 0.99, buffer2)
     expect_equal(as.numeric(w2), before - 0.99 * 0.05 * c(1, 2), tolerance = 1e-6) # t=1
   })
+
+  test_that("PDSCA AUC branch == pesg_primal_step", {
+    skip_on_cran()
+    #   w = torch.tensor([0.3, -0.2], requires_grad=True)
+    #   lf = CompositionalAUCLoss(margin=1.0, k=1, version='v1', device='cpu')
+    #   opt = PDSCA([w], lf, lr=0.1, lr0=0.05, beta1=0.99, beta2=0.5,
+    #               weight_decay=0.0, epoch_decay=0.0, clip_value=10.0, device='cpu')
+    #   for t in range(4):
+    #       w.grad = None
+    #       lf.alpha.grad = torch.zeros(1)
+    #       ((w * torch.tensor([1.,2.])) * (t+1)).sum().backward()
+    #       opt.step()
+    w <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    expected <- list(
+      c(0.20000001788139343, -0.4000000059604645),
+      c(0.050000011920928955, -0.7000000476837158),
+      c(-0.17499999701976776, -1.1500000953674316),
+      c(-0.48750001192092896, -1.7750000953674316)
+    )
+    buffer <- NULL
+    model_acc <- torch::torch_zeros(2)
+    for (t in seq_along(expected)) {
+      grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
+      res <- pesg_primal_step(
+        w, grad,
+        lr = 0.1,
+        clamp_value = 10, weight_decay = 0, epoch_decay = 0, model_ref = 0,
+        momentum = 0.5,
+        buffer = buffer, model_acc = model_acc
+      )
+      buffer <- res$buffer
+      model_acc <- res$model_acc
+      expect_equal(as.numeric(w), expected[[t]], tolerance = 1e-6)
+    }
+  })
 }
