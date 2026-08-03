@@ -447,4 +447,36 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     )
     expect_equal(state$T, 4)
   })
+
+  test_that("test optim_pdsca update_lr", {
+    skip_on_cran()
+    a <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    opt <- optim_pdsca(list(a),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 10, decay_factor = 2
+    )
+    opt$update_lr()
+    expect_equal(opt$param_groups[[1]]$lr, 0.1 / 2, tolerance = 1e-9) # 0.05
+    expect_equal(opt$param_groups[[1]]$lr0, 0.05 / 10, tolerance = 1e-9) # 0.005
+    opt$update_lr()
+    expect_equal(opt$param_groups[[1]]$lr, 0.1 / 4, tolerance = 1e-9)
+    expect_equal(opt$param_groups[[1]]$lr0, 0.05 / 100, tolerance = 1e-9)
+    a <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    b <- torch::torch_tensor(c(3), dtype = torch::torch_float32(), requires_grad = TRUE)
+    opt <- optim_pdsca(
+      list(list(params = list(a)), list(params = list(b))),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 10, decay_factor = 2
+    )
+    expect_equal(length(opt$param_groups), 2)
+    opt$update_lr()
+    for (i in 1:2) {
+      expect_equal(opt$param_groups[[i]]$lr, 0.05, tolerance = 1e-9)
+      expect_equal(opt$param_groups[[i]]$lr0, 0.005, tolerance = 1e-9)
+    }
+  })
 }

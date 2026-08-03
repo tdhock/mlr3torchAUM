@@ -108,6 +108,12 @@ optim_pdsca <- torch::optimizer(
         }
       }
     })
+  },
+  update_lr = function() {
+    for (i in seq_along(self$param_groups)) {
+      self$param_groups[[i]]$lr0 <- self$param_groups[[i]]$lr0 / self$param_groups[[i]]$decay_factor0
+      self$param_groups[[i]]$lr <- self$param_groups[[i]]$lr / self$param_groups[[i]]$decay_factor
+    }
   }
 )
 
