@@ -109,6 +109,24 @@ optim_pdsca <- torch::optimizer(
       }
     })
   },
+  update_regularizer = function() {
+    for (group in self$param_groups) {
+      for (param in group$params) {
+        state <- self$state$get(param)
+        if (is.null(state) || state$T == 0) {
+          stop(
+            "update_regularizer() called before any optimizer step (T = 0); ",
+            "nothing to average."
+          )
+        }
+        res <- pesg_update_regularizer(state$model_acc, state$T)
+        state$model_ref <- res$model_ref
+        state$model_acc <- res$model_acc
+        state$T <- res$T
+        self$state$set(param, state)
+      }
+    }
+  },
   update_lr = function() {
     for (i in seq_along(self$param_groups)) {
       self$param_groups[[i]]$lr0 <- self$param_groups[[i]]$lr0 / self$param_groups[[i]]$decay_factor0
@@ -143,6 +161,25 @@ make_pdsca_callback <- function(
         )
       }
       opt$loss_ref <- self$ctx$loss_fn
+    },
+    on_epoch_end = function() {
+      self$ctx$optimizer$update_regularizer()
+      self$ctx$optimizer$update_lr()
+      if (!is.null(state_a)) {
+        reg_a <- pesg_update_regularizer(state_a$model_acc, state_a$T)
+        state_a <<- list(
+          model_ref = reg_a$model_ref, model_acc = reg_a$model_acc,
+          T = reg_a$T, buffer = state_a$buffer
+        )
+      }
+      if (!is.null(state_b)) {
+        reg_b <- pesg_update_regularizer(state_b$model_acc, state_b$T)
+        state_b <<- list(
+          model_ref = reg_b$model_ref, model_acc = reg_b$model_acc,
+          T = reg_b$T, buffer = state_b$buffer
+        )
+      }
+      lr_ab <<- pesg_update_lr(lr_ab, decay_factor)
     }
   )
 }

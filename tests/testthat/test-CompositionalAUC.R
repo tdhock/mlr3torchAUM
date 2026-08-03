@@ -479,4 +479,110 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       expect_equal(opt$param_groups[[i]]$lr0, 0.005, tolerance = 1e-9)
     }
   })
+
+  test_that("test optim_pdsca update_regularizer", {
+    skip_on_cran()
+    p <- torch::torch_tensor(c(0.3, -0.2),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    lf <- nn_CompositionalAUC_loss()
+    opt <- optim_pdsca(list(p),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 10, decay_factor = 2
+    )
+    opt$loss_ref <- lf
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
+    label <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    for (t in 1:4) {
+      lf(pred, label)
+      p$grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
+      opt$step()
+    }
+    before <- opt$state$get(p)
+    acc_before <- as.numeric(before$model_acc)
+    expect_equal(before$T, 4)
+    wb_before <- as.numeric(before$weight_buffer)
+    mb_before <- as.numeric(before$momentum_buffer)
+    opt$update_regularizer()
+    after <- opt$state$get(p)
+    expect_equal(as.numeric(after$model_ref), acc_before / 4, tolerance = 1e-6)
+    expect_equal(as.numeric(after$model_acc), c(0, 0), tolerance = 1e-9)
+    expect_equal(after$T, 0)
+     # won't touch buffers
+    expect_equal(as.numeric(after$weight_buffer), wb_before, tolerance = 1e-9)
+    expect_equal(as.numeric(after$momentum_buffer), mb_before, tolerance = 1e-9)
+  })
+
+  test_that("test make_pdsca_callback on_epoch_end", {
+    skip_on_cran()
+    cb <- make_pdsca_callback(
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, momentum = 0.5, decay_factor = 2
+    )
+    cb_inst <- cb$generate()
+    loss_fn <- nn_CompositionalAUC_loss() # k = 1: ce, aucm, ce, aucm
+    p <- torch::torch_tensor(c(0.3, -0.2),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    opt <- optim_pdsca(list(p),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 10, decay_factor = 2
+    )
+    cb_inst$ctx <- list(optimizer = opt, loss_fn = loss_fn)
+    cb_inst$on_begin()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    for (t in 1:4) {
+      loss_fn(pred, target)$backward()
+      cb_inst$on_after_backward()
+      p$grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
+      opt$step()
+    }
+    before <- opt$state$get(p)
+    acc_before <- as.numeric(before$model_acc)
+    wb_before <- as.numeric(before$weight_buffer)
+    mb_before <- as.numeric(before$momentum_buffer)
+    expect_equal(before$T, 4)
+    cb_inst$on_epoch_end()
+    after <- opt$state$get(p)
+    expect_equal(as.numeric(after$model_ref), acc_before / 4, tolerance = 1e-6)
+    expect_equal(as.numeric(after$model_acc), c(0, 0), tolerance = 1e-9)
+    expect_equal(after$T, 0)
+    expect_equal(as.numeric(after$weight_buffer), wb_before, tolerance = 1e-9)
+    expect_equal(as.numeric(after$momentum_buffer), mb_before, tolerance = 1e-9)
+    expect_equal(opt$param_groups[[1]]$lr, 0.1 / 2, tolerance = 1e-9)
+    expect_equal(opt$param_groups[[1]]$lr0, 0.05 / 10, tolerance = 1e-9)
+    # edge case: an epoch made purely of CE batches
+    cb_inst2 <- cb$generate()
+    loss_fn2 <- nn_CompositionalAUC_loss(k = 100) # k >> n_batch -> every batch is CE
+    p2 <- torch::torch_tensor(c(0.3, -0.2),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    opt2 <- optim_pdsca(list(p2),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 10, decay_factor = 2
+    )
+    cb_inst2$ctx <- list(optimizer = opt2, loss_fn = loss_fn2)
+    cb_inst2$on_begin()
+    for (t in 1:2) {
+      loss_fn2(pred, target)$backward()
+      cb_inst2$on_after_backward()
+      p2$grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
+      opt2$step()
+    }
+    expect_no_error(cb_inst2$on_epoch_end())
+    after2 <- opt2$state$get(p2)
+    expect_equal(after2$T, 0)
+    expect_false(is.null(after2$weight_buffer))
+    expect_true(is.null(after2$momentum_buffer))
+    expect_equal(opt2$param_groups[[1]]$lr, 0.05, tolerance = 1e-9)
+  })
 }
