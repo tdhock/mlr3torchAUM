@@ -38,6 +38,33 @@ pdsca_ce_weight_step <- function(p, grad,
   return(buffer_new)
 }
 
+pdsca_weight_step <- function(p, grad, pass,
+                              lr, lr0,
+                              clamp_value, weight_decay, epoch_decay,
+                              weight_momentum, momentum,
+                              state) {
+  if (is.null(state)) {
+    state <- list(
+      momentum_buffer = NULL, weight_buffer = NULL,
+      model_acc = 0, model_ref = 0, T = 0
+    )
+  }
+  if (pass == "aucm") {
+    res <- pesg_primal_step(
+      p, grad, lr, clamp_value, weight_decay, epoch_decay,
+      state$model_ref, momentum, state$momentum_buffer, state$model_acc
+    )
+    state$momentum_buffer <- res$buffer
+    state$model_acc <- res$model_acc
+  } else {
+    state$weight_buffer <- pdsca_ce_weight_step(
+      p, grad, lr0, clamp_value, weight_decay, epoch_decay,
+      state$model_ref, weight_momentum, state$weight_buffer
+    )
+  }
+  return(state)
+}
+
 make_pdsca_callback <- function(
   lr, clamp_value, weight_decay,
   epoch_decay, momentum, decay_factor

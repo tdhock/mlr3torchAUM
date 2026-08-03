@@ -262,4 +262,96 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       expect_equal(as.numeric(w), expected[[t]], tolerance = 1e-6)
     }
   })
+
+  test_that("PDSCA pdsca_weight_step", {
+    skip_on_cran()
+    #   w  = torch.tensor([0.3, -0.2], requires_grad=True)
+    #   lf = CompositionalAUCLoss(margin=1.0, k=1, version='v1', device='cpu')
+    #   opt = PDSCA([w], lf, lr=0.1, lr0=0.05, beta1=0.99, beta2=0.5,
+    #               weight_decay=0.0, epoch_decay=0.0, clip_value=10.0, device='cpu')
+    #   for t, ps in enumerate(['ce','auc','ce','auc']):
+    #       w.grad = None
+    #       lf.alpha.grad = None if ps == 'ce' else torch.zeros(1)
+    #       ((w * torch.tensor([1.,2.])) * (t+1)).sum().backward()
+    #       opt.step()
+    p <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    passes <- c("ce", "aucm", "ce", "aucm")
+    expected <- list(
+      c(0.25, -0.30000001192092896),
+      c(0.04999999701976776, -0.7000000476837158),
+      c(-0.09650000929832458, -0.9930000305175781),
+      c(-0.39650002121925354, -1.593000054359436)
+    )
+    state <- list(
+      weight_buffer = NULL, momentum_buffer = NULL,
+      model_acc = torch::torch_zeros(2), 
+      model_ref = torch::torch_zeros(2),
+      T = 0
+    )
+    for (t in seq_along(passes)) {
+      grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
+      state <- pdsca_weight_step(
+        p, grad, passes[t],
+        lr = 0.1, lr0 = 0.05,
+        clamp_value = 10, weight_decay = 0, epoch_decay = 0,
+        weight_momentum = 0.99, # beta1
+        momentum = 0.5, # beta2
+        state = state
+      )
+      expect_equal(as.numeric(p), expected[[t]], tolerance = 1e-6)
+    }
+    expect_false(is.null(state$weight_buffer))
+    expect_false(is.null(state$momentum_buffer))
+    expect_equal(as.numeric(state$weight_buffer),
+      c(-0.09650000929832458, -0.9930000305175781),
+      tolerance = 1e-6
+    )
+    # 0.5 * 2 + 0.5 * 4 = 1 + 2 = 3
+    # 0.5 * 4 + 0.5 * 8 = 2 + 4 = 6
+    expect_equal(as.numeric(state$momentum_buffer), c(3, 6), tolerance = 1e-6)
+  })
+
+  test_that("PDSCA pdsca_weight_step only CE", {
+    skip_on_cran()
+    p <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    state <- list(
+      weight_buffer = NULL, momentum_buffer = NULL,
+      model_acc = torch::torch_zeros(2), 
+      model_ref = torch::torch_zeros(2),
+      T = 0
+    )
+    grad <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    state <- pdsca_weight_step(
+      p, grad, "ce",
+      lr = 0.1, lr0 = 0.05,
+      clamp_value = 10, weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, # beta1
+      momentum = 0.5, # beta2
+      state = state
+    )
+    expect_false(is.null(state$weight_buffer))
+    expect_true(is.null(state$momentum_buffer))
+  })
+
+  test_that("PDSCA pdsca_weight_step only AUCM", {
+    skip_on_cran()
+    p <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    state <- list(
+      weight_buffer = NULL, momentum_buffer = NULL,
+      model_acc = torch::torch_zeros(2), 
+      model_ref = torch::torch_zeros(2),
+      T = 0
+    )
+    grad <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    state <- pdsca_weight_step(
+      p, grad, "aucm",
+      lr = 0.1, lr0 = 0.05,
+      clamp_value = 10, weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, # beta1
+      momentum = 0.5, # beta2
+      state = state
+    )
+    expect_true(is.null(state$weight_buffer))
+    expect_false(is.null(state$momentum_buffer))
+  })
 }
