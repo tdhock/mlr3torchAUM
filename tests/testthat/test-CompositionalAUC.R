@@ -215,16 +215,23 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
         w, grad,
         lr0 = 0.05, clamp_value = 10, weight_decay = 0,
         epoch_decay = 0, model_ref = 0,
-        weight_momentum = 0.99, buffer = buffer
-      )
+        weight_momentum = 0.99, buffer = buffer,
+        model_acc = torch::torch_zeros(2)
+      )$buffer
       expect_equal(as.numeric(w), expected[[t]], tolerance = 1e-6)
     }
     w2 <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
     buffer2 <- NULL
-    buffer2 <- pdsca_ce_weight_step(w2, grad, 0.05, 10, 0, 0, 0, 0.99, buffer2)
+    buffer2 <- pdsca_ce_weight_step(w2, grad, 0.05, 10, 0, 0, 0, 0.99,
+      buffer2,
+      model_acc = torch::torch_zeros(2)
+    )$buffer
     expect_equal(as.numeric(w2), c(0.3, -0.2) - 0.05 * c(1, 2), tolerance = 1e-6) # t=0
     before <- as.numeric(w2)
-    buffer2 <- pdsca_ce_weight_step(w2, grad, 0.05, 10, 0, 0, 0, 0.99, buffer2)
+    buffer2 <- pdsca_ce_weight_step(w2, grad, 0.05, 10, 0, 0, 0, 0.99,
+      buffer2,
+      model_acc = torch::torch_zeros(2)
+    )$buffer
     expect_equal(as.numeric(w2), before - 0.99 * 0.05 * c(1, 2), tolerance = 1e-6) # t=1
   })
 
@@ -284,7 +291,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     )
     state <- list(
       weight_buffer = NULL, momentum_buffer = NULL,
-      model_acc = torch::torch_zeros(2), 
+      model_acc = torch::torch_zeros(2),
       model_ref = torch::torch_zeros(2),
       T = 0
     )
@@ -292,7 +299,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
       state <- pdsca_weight_step(
         p, grad, passes[t],
-        lr = 0.1, lr0 = 0.05,
+        lr0 = 0.05, lr = 0.1,
         clamp_value = 10, weight_decay = 0, epoch_decay = 0,
         weight_momentum = 0.99, # beta1
         momentum = 0.5, # beta2
@@ -316,14 +323,14 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     p <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
     state <- list(
       weight_buffer = NULL, momentum_buffer = NULL,
-      model_acc = torch::torch_zeros(2), 
+      model_acc = torch::torch_zeros(2),
       model_ref = torch::torch_zeros(2),
       T = 0
     )
     grad <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
     state <- pdsca_weight_step(
       p, grad, "ce",
-      lr = 0.1, lr0 = 0.05,
+      lr0 = 0.05, lr = 0.1,
       clamp_value = 10, weight_decay = 0, epoch_decay = 0,
       weight_momentum = 0.99, # beta1
       momentum = 0.5, # beta2
@@ -338,14 +345,14 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     p <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32(), requires_grad = TRUE)
     state <- list(
       weight_buffer = NULL, momentum_buffer = NULL,
-      model_acc = torch::torch_zeros(2), 
+      model_acc = torch::torch_zeros(2),
       model_ref = torch::torch_zeros(2),
       T = 0
     )
     grad <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
     state <- pdsca_weight_step(
       p, grad, "aucm",
-      lr = 0.1, lr0 = 0.05,
+      lr0 = 0.05, lr = 0.1,
       clamp_value = 10, weight_decay = 0, epoch_decay = 0,
       weight_momentum = 0.99, # beta1
       momentum = 0.5, # beta2
@@ -353,5 +360,91 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     )
     expect_true(is.null(state$weight_buffer))
     expect_false(is.null(state$momentum_buffer))
+  })
+
+  test_that("test optim_pdsca", {
+    skip_on_cran()
+    p <- torch::torch_tensor(c(0.3, -0.2),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    lf <- nn_CompositionalAUC_loss() # k = 1 -> ce, aucm, ce, aucm
+    opt <- optim_pdsca(list(p),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 2, decay_factor = 2
+    )
+    opt$loss_ref <- lf
+    expect_true(is.null(opt$state$get(p)))
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
+    label <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    # reproduce script see above
+    expected <- list(
+      c(0.25, -0.30000001192092896),
+      c(0.04999999701976776, -0.7000000476837158),
+      c(-0.09650000929832458, -0.9930000305175781),
+      c(-0.39650002121925354, -1.593000054359436)
+    )
+    for (t in seq_along(expected)) {
+      lf(pred, label)
+      p$grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
+      opt$step()
+      expect_equal(as.numeric(p), expected[[t]], tolerance = 1e-6)
+    }
+    state <- opt$state$get(p)
+    expect_false(is.null(state))
+    expect_equal(as.numeric(state$weight_buffer),
+      c(-0.09650000929832458, -0.9930000305175781), # last ce
+      tolerance = 1e-6
+    )
+    # 0.5 * 2 + 0.5 * 4 = 1 + 2 = 3
+    # 0.5 * 4 + 0.5 * 8 = 2 + 4 = 6
+    expect_equal(as.numeric(state$momentum_buffer), c(3, 6), tolerance = 1e-6)
+  })
+
+  test_that("optim_pdsca with weight_decay and epoch_decay turned on", {
+    skip_on_cran()
+    #   w  = torch.tensor([0.3, -0.2], requires_grad=True)
+    #   lf = CompositionalAUCLoss(margin=1.0, k=1, version='v1', device='cpu')
+    #   opt = PDSCA([w], lf, lr=0.1, lr0=0.05, beta1=0.99, beta2=0.5,
+    #               weight_decay=0.01, epoch_decay=0.02, clip_value=10.0, device='cpu')
+    #   for i in range(len(opt.model_ref)): opt.model_ref[i].data.zero_()
+    #   for t, ps in enumerate(['ce','auc','ce','auc']):
+    #       w.grad = None
+    #       lf.alpha.grad = None if ps == 'ce' else torch.zeros(1)
+    #       ((w * torch.tensor([1.,2.])) * (t+1)).sum().backward()
+    #       opt.step()
+    #   print(w, opt.model_acc[0], opt.T)
+    p <- torch::torch_tensor(c(0.3, -0.2),
+      dtype = torch::torch_float32(), requires_grad = TRUE
+    )
+    lf <- nn_CompositionalAUC_loss() # k = 1 -> ce, aucm, ce, aucm
+    opt <- optim_pdsca(list(p),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0.01, epoch_decay = 0.02,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 2, decay_factor = 2
+    )
+    opt$loss_ref <- lf
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
+    label <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    expected <- list(
+      c(0.2495500147342682, -0.2997000217437744),
+      c(0.048801347613334656, -0.6988009214401245),
+      c(-0.09776365011930466, -0.9907721877098083),
+      c(-0.3979913592338562, -1.588836431503296)
+    )
+    for (t in seq_along(expected)) {
+      invisible(lf(pred, label))
+      p$grad <- torch::torch_tensor(c(1, 2) * t, dtype = torch::torch_float32())
+      opt$step()
+      expect_equal(as.numeric(p), expected[[t]], tolerance = 1e-6)
+    }
+    state <- opt$state$get(p)
+    expect_equal(as.numeric(state$model_acc),
+      c(-0.1974036693572998, -3.5781095027923584),
+      tolerance = 1e-5
+    )
+    expect_equal(state$T, 4)
   })
 }
