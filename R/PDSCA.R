@@ -160,7 +160,15 @@ make_pdsca_callback <- function(
           "set L$optimizer <- mlr3torch::as_torch_optimizer(optim_pdsca)."
         )
       }
-      opt$loss_ref <- self$ctx$loss_fn
+      loss_fn <- self$ctx$loss_fn
+      if (is.null(loss_fn$step) || is.null(loss_fn$k)) {
+        stop(
+          "PDSCA requires nn_CompositionalAUC_loss as the learner's loss ",
+          "(it carries the step counter driving the CE/AUCM alternation); ",
+          "set L$loss <- nn_CompositionalAUC_loss."
+        )
+      }
+      opt$loss_ref <- loss_fn
     },
     on_epoch_end = function() {
       self$ctx$optimizer$update_regularizer()

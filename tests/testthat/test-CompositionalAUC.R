@@ -585,4 +585,30 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_true(is.null(after2$momentum_buffer))
     expect_equal(opt2$param_groups[[1]]$lr, 0.05, tolerance = 1e-9)
   })
+
+  test_that("make_pdsca_callback validates the loss at injection time", {
+    skip_on_cran()
+    # optim_pdsca derives the pass from the loss's step counter, so a loss without
+    # one (e.g. nn_AUCM_loss) cannot drive it. Catch that at on_begin -- once,
+    # before training -- instead of letting pdsca_pass() fail on NULL$item() with
+    # an unreadable message on every batch.
+    cb_inst <- make_pdsca_callback(
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, momentum = 0.5, decay_factor = 2
+    )$generate()
+    w <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32(), requires_grad = TRUE)
+    opt <- optim_pdsca(list(w),
+      lr0 = 0.05, lr = 0.1, clamp_value = 10,
+      weight_decay = 0, epoch_decay = 0,
+      weight_momentum = 0.99, momentum = 0.5,
+      decay_factor0 = 10, decay_factor = 2
+    )
+    cb_inst$ctx <- list(optimizer = opt, loss_fn = nn_AUCM_loss(margin = 1))
+    expect_error(cb_inst$on_begin(), regexp = "nn_CompositionalAUC_loss")
+    expect_true(is.null(opt$loss_ref)) # nothing was injected
+    loss_fn <- nn_CompositionalAUC_loss()
+    cb_inst$ctx <- list(optimizer = opt, loss_fn = loss_fn)
+    expect_no_error(cb_inst$on_begin())
+    expect_true(identical(opt$loss_ref, loss_fn))
+  })
 }
