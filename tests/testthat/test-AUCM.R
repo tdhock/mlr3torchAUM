@@ -534,4 +534,51 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       )
     }
   })
+
+  test_that("test nn_AUCM_loss forwards version to AUCM", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2")
+    expect_equal(loss_fn(pred, label)$item(), 0.4662500, tolerance = 1e-6)
+    loss_fn_default <- nn_AUCM_loss(margin = 1)
+    expect_equal(loss_fn_default(pred, label)$item(), 0.1165625, tolerance = 1e-6)
+  })
+
+  test_that("test v2 gradients of a, b and alpha", {
+    skip_on_cran()
+    # uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 python
+    #
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   def grads(a, b, al, s_list, y_list, m=1.0):
+    #       s = torch.tensor(s_list).view(-1, 1); y = torch.tensor(y_list).view(-1, 1)
+    #       p = sum(y_list) / len(y_list); sc = p * (1 - p)
+    #       f = AUCMLoss(margin=m, version='v1')
+    #       with torch.no_grad(): f.a.fill_(a); f.b.fill_(b); f.alpha.fill_(al)
+    #       L = f(s, y); L.backward()
+    #       return [float(f.a.grad)/sc, float(f.b.grad)/sc, float(f.alpha.grad)/sc]
+    #   S = [0.1, 0.4, 0.35, 0.8]; Y = [0., 0., 1., 1.]
+    #   grads(0, 0, 0, S, Y)        # [-1.149999976158142, -0.5, 1.350000023841858]
+    #   grads(0.3, 0.6, 0.5, S, Y)  # [-0.5499999523162842, 0.7000000476837158, 0.3500000238418579]
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2")
+    loss <- loss_fn(pred, label)
+    expect_true(loss$requires_grad)
+    loss$backward()
+    expect_equal(as.numeric(loss_fn$a$grad), -1.15, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b$grad), -0.5, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha$grad), 1.35, tolerance = 1e-6)
+    loss_fn2 <- nn_AUCM_loss(margin = 1, version = "v2")
+    torch::with_no_grad({
+      loss_fn2$a$fill_(0.3)
+      loss_fn2$b$fill_(0.6)
+      loss_fn2$alpha$fill_(0.5)
+    })
+    loss_fn2(pred, label)$backward()
+    expect_equal(as.numeric(loss_fn2$a$grad), -0.55, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn2$b$grad), 0.7, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn2$alpha$grad), 0.35, tolerance = 1e-6)
+  })
 }
