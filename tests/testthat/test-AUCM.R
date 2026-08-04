@@ -508,4 +508,84 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       tolerance = 1e-6
     )
   })
+
+  test_that("test v2 equals v1 divided by p*(1-p)", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    for (label_values in list(c(0, 0, 1, 1), c(0, 0, 0, 1), c(0, 1, 1, 1))) {
+      label <- torch::torch_tensor(label_values)
+      p <- as.numeric(positive_ratio(label))
+      for (par in list(c(0, 0, 0, 1), c(0.3, 0.6, 0.5, 1), c(0.2, 0.1, 0.7, 2))) {
+        v1 <- AUCM(pred, label, par[1], par[2], par[3], par[4])$item()
+        v2 <- AUCM(pred, label, par[1], par[2], par[3], par[4], version = "v2")$item()
+        expect_equal(v2, v1 / (p * (1 - p)), tolerance = 1e-6)
+      }
+    }
+  })
+
+  test_that("test v2 does not reproduce the LibAUC cross-term flaw", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    v2 <- AUCM(pred, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 1, version = "v2")$item()
+    expect_false(isTRUE(all.equal(v2, 0.5712500, tolerance = 1e-6)))
+  })
+
+  test_that("test v2 keeps zero-valued samples in the class size", {
+    skip_on_cran()
+    # uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 python
+    #
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   def golden(a, b, al, s_list, y_list, m=1.0, version='v1'):
+    #       s = torch.tensor(s_list).view(-1, 1); y = torch.tensor(y_list).view(-1, 1)
+    #       p = sum(y_list) / len(y_list)
+    #       f = AUCMLoss(margin=m, version=version)
+    #       with torch.no_grad(): f.a.fill_(a); f.b.fill_(b); f.alpha.fill_(al)
+    #       out = float(f(s, y))
+    #       return out / (p * (1 - p)) if version == 'v1' else out
+    #   S0 = [0.0, 0.4, 0.35, 0.8]; Y = [0., 0., 1., 1.]
+    #   golden(0, 0, 0, S0, Y)         # 0.46125003695487976  LibAUC v2: 0.5412500500679016
+    #   golden(0.3, 0.6, 0.5, S0, Y)   # 0.7012500166893005   LibAUC v2: 0.6012499928474426
+    pred_with_zero <- torch::torch_tensor(c(0.0, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      AUCM(pred_with_zero, label, a = 0, b = 0, alpha = 0, margin = 1, version = "v2")$item(),
+      0.4612500,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred_with_zero, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 1, version = "v2")$item(),
+      0.7012500,
+      tolerance = 1e-6
+    )
+  })
+
+  test_that("test v2 stays finite when a whole class sits on its center", {
+    skip_on_cran()
+    #   SAT = [0.0, 0.0, 1.0, 1.0]; Y = [0., 0., 1., 1.]
+    #   golden(1.0, 0.0, 0.5, SAT, Y)  # -0.25                LibAUC v2: nan
+    pred_saturated <- torch::torch_tensor(c(0, 0, 1, 1))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    saturated <- AUCM(pred_saturated, label,
+      a = 1, b = 0, alpha = 0.5, margin = 1, version = "v2"
+    )$item()
+    expect_false(is.nan(saturated))
+    expect_equal(saturated, -0.25, tolerance = 1e-6)
+  })
+
+  test_that("test v2 is NaN for a single-class batch while v1 is finite", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    for (label_values in list(c(0, 0, 0, 0), c(1, 1, 1, 1))) {
+      label <- torch::torch_tensor(label_values)
+      expect_true(is.nan(
+        AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, version = "v2")$item()
+      ))
+      expect_equal(AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1)$item(),
+        0,
+        tolerance = 1e-6
+      )
+    }
+  })
 }
