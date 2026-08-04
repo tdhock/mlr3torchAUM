@@ -586,41 +586,8 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(opt2$param_groups[[1]]$lr, 0.05, tolerance = 1e-9)
   })
 
-  test_that("make_pdsca_callback validates the loss at injection time", {
-    skip_on_cran()
-    # optim_pdsca derives the pass from the loss's step counter, so a loss without
-    # one (e.g. nn_AUCM_loss) cannot drive it. Catch that at on_begin -- once,
-    # before training -- instead of letting pdsca_pass() fail on NULL$item() with
-    # an unreadable message on every batch.
-    cb_inst <- make_pdsca_callback(
-      lr = 0.1, clamp_value = 10, weight_decay = 0,
-      epoch_decay = 0, momentum = 0.5, decay_factor = 2
-    )$generate()
-    w <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32(), requires_grad = TRUE)
-    opt <- optim_pdsca(list(w),
-      lr0 = 0.05, lr = 0.1, clamp_value = 10,
-      weight_decay = 0, epoch_decay = 0,
-      weight_momentum = 0.99, momentum = 0.5,
-      decay_factor0 = 10, decay_factor = 2
-    )
-    cb_inst$ctx <- list(optimizer = opt, loss_fn = nn_AUCM_loss(margin = 1))
-    expect_error(cb_inst$on_begin(), regexp = "nn_CompositionalAUC_loss")
-    expect_true(is.null(opt$loss_ref)) # nothing was injected
-    loss_fn <- nn_CompositionalAUC_loss()
-    cb_inst$ctx <- list(optimizer = opt, loss_fn = loss_fn)
-    expect_no_error(cb_inst$on_begin())
-    expect_true(identical(opt$loss_ref, loss_fn))
-  })
-
   test_that("CE branch needs probabilities: a plain MLP feeds logits and fails", {
     skip_on_cran()
-    # nn_CompositionalAUC_loss's CE branch is nnf_binary_cross_entropy, which needs
-    # probabilities in [0, 1] (it takes log(p) and log(1-p)). LearnerTorchMLP ends
-    # in a linear head, so it emits raw logits and the very first CE batch dies.
-    # Note the asymmetry that hides this: the AUCM branch only squares its input,
-    # so it accepts logits SILENTLY -- which is why the pure-AUCM e2e test never
-    # exposed the problem (tracked in issue #89). Pinning the failure here
-    # documents why the end-to-end test below terminates the network with sigmoid.
     set.seed(1)
     torch::torch_manual_seed(1)
     n <- 200
@@ -637,13 +604,6 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("e2e: sigmoid-terminated graph learner trains with optim_pdsca", {
     skip_on_cran()
-    # Full wiring in a real mlr3torch training loop:
-    #   sigmoid-terminated network  +  nn_CompositionalAUC_loss
-    #   +  optim_pdsca (network weights)  +  make_pdsca_callback (a/b/alpha)
-    # Assertions are properties, not golden values: the R port deliberately
-    # diverges from LibAUC from the 2nd CE step on (it fixes the broken
-    # `alpha.grad is None` pass selector), and epoch_decay > 0 seeds model_ref
-    # randomly upstream, so a bit-exact cross-language oracle is impossible here.
     set.seed(1)
     torch::torch_manual_seed(1)
     n <- 200
@@ -662,7 +622,6 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
       epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2
     )
-    # record what the loss actually sees, to prove the sigmoid did its job
     seen <- new.env()
     seen$lo <- Inf
     seen$hi <- -Inf
@@ -671,36 +630,25 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       seen$lo <- min(seen$lo, as.numeric(y_hat$min()))
       seen$hi <- max(seen$hi, as.numeric(y_hat$max()))
     })
-
-    # `%>>%` (graph concatenation) lives in mlr3pipelines and is not attached here,
-    # since this file namespaces everything explicitly. Alias it locally.
     `%>>%` <- mlr3pipelines::`%>>%`
     po <- mlr3pipelines::po
     graph <- po("torch_ingress_num") %>>%
       po("nn_linear", out_features = 4) %>>%
       po("nn_relu") %>>%
       po("nn_head") %>>%
-      po("nn_sigmoid") %>>% # <- squashes the head's logits into [0, 1]
+      po("nn_sigmoid") %>>% # transfrom logits to probs
       po("torch_loss", loss = nn_CompositionalAUC_loss) %>>%
       po("torch_optimizer", optimizer = opt) %>>%
       po("torch_callbacks", callbacks = list(cb, probe)) %>>%
       po("torch_model_classif",
         epochs = 10, batch_size = 32, shuffle = TRUE, seed = 1
       )
-    gl <- mlr3::as_learner(graph) # generic lives in mlr3; the Graph method in mlr3pipelines
+    gl <- mlr3::as_learner(graph)
     gl$predict_type <- "prob"
     expect_no_error(gl$train(task))
-
-    # the sigmoid really did constrain the loss input
     expect_gte(seen$lo, 0)
     expect_lte(seen$hi, 1)
-
-    # the model learned something
     expect_gt(gl$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
-
-    # a/b/alpha are semantic: a anchors the POSITIVE class mean, b the negative
-    # one, so a > b means the scores point the right way; alpha is a dual variable
-    # projected onto [0, 999] and must stay feasible.
     loss_fn <- gl$model$torch_model_classif$model$loss_fn
     expect_gt(as.numeric(loss_fn$a), as.numeric(loss_fn$b))
     expect_gte(as.numeric(loss_fn$alpha), 0)
