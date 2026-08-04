@@ -23,7 +23,7 @@ Imports:
 Suggests:
     testthat,
     knitr, markdown,
-    mlr3torch,
+    mlr3torch, mlr3pipelines,
     future, future.apply,
     litedown
 VignetteBuilder: knitr

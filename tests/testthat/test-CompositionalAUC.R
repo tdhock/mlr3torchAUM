@@ -611,4 +611,99 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_no_error(cb_inst$on_begin())
     expect_true(identical(opt$loss_ref, loss_fn))
   })
+
+  test_that("CE branch needs probabilities: a plain MLP feeds logits and fails", {
+    skip_on_cran()
+    # nn_CompositionalAUC_loss's CE branch is nnf_binary_cross_entropy, which needs
+    # probabilities in [0, 1] (it takes log(p) and log(1-p)). LearnerTorchMLP ends
+    # in a linear head, so it emits raw logits and the very first CE batch dies.
+    # Note the asymmetry that hides this: the AUCM branch only squares its input,
+    # so it accepts logits SILENTLY -- which is why the pure-AUCM e2e test never
+    # exposed the problem (tracked in issue #89). Pinning the failure here
+    # documents why the end-to-end test below terminates the network with sigmoid.
+    set.seed(1)
+    torch::torch_manual_seed(1)
+    n <- 200
+    x1 <- rnorm(n)
+    x2 <- rnorm(n)
+    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
+    task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
+    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+    L$loss <- nn_CompositionalAUC_loss
+    L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.1)
+    L$param_set$set_values(epochs = 1, batch_size = 32, neurons = 4)
+    expect_error(L$train(task), regexp = "between 0 and 1")
+  })
+
+  test_that("e2e: sigmoid-terminated graph learner trains with optim_pdsca", {
+    skip_on_cran()
+    # Full wiring in a real mlr3torch training loop:
+    #   sigmoid-terminated network  +  nn_CompositionalAUC_loss
+    #   +  optim_pdsca (network weights)  +  make_pdsca_callback (a/b/alpha)
+    # Assertions are properties, not golden values: the R port deliberately
+    # diverges from LibAUC from the 2nd CE step on (it fixes the broken
+    # `alpha.grad is None` pass selector), and epoch_decay > 0 seeds model_ref
+    # randomly upstream, so a bit-exact cross-language oracle is impossible here.
+    set.seed(1)
+    torch::torch_manual_seed(1)
+    n <- 200
+    x1 <- rnorm(n)
+    x2 <- rnorm(n)
+    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
+    task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
+
+    opt <- mlr3torch::as_torch_optimizer(optim_pdsca)
+    opt$param_set$set_values(
+      lr0 = 0.05, lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, weight_momentum = 0.9, momentum = 0.9,
+      decay_factor0 = 2, decay_factor = 2
+    )
+    cb <- make_pdsca_callback(
+      lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2
+    )
+    # record what the loss actually sees, to prove the sigmoid did its job
+    seen <- new.env()
+    seen$lo <- Inf
+    seen$hi <- -Inf
+    probe <- mlr3torch::torch_callback("probe", on_after_backward = function() {
+      y_hat <- self$ctx$y_hat
+      seen$lo <- min(seen$lo, as.numeric(y_hat$min()))
+      seen$hi <- max(seen$hi, as.numeric(y_hat$max()))
+    })
+
+    # `%>>%` (graph concatenation) lives in mlr3pipelines and is not attached here,
+    # since this file namespaces everything explicitly. Alias it locally.
+    `%>>%` <- mlr3pipelines::`%>>%`
+    po <- mlr3pipelines::po
+    graph <- po("torch_ingress_num") %>>%
+      po("nn_linear", out_features = 4) %>>%
+      po("nn_relu") %>>%
+      po("nn_head") %>>%
+      po("nn_sigmoid") %>>% # <- squashes the head's logits into [0, 1]
+      po("torch_loss", loss = nn_CompositionalAUC_loss) %>>%
+      po("torch_optimizer", optimizer = opt) %>>%
+      po("torch_callbacks", callbacks = list(cb, probe)) %>>%
+      po("torch_model_classif",
+        epochs = 10, batch_size = 32, shuffle = TRUE, seed = 1
+      )
+    gl <- mlr3::as_learner(graph) # generic lives in mlr3; the Graph method in mlr3pipelines
+    gl$predict_type <- "prob"
+    expect_no_error(gl$train(task))
+
+    # the sigmoid really did constrain the loss input
+    expect_gte(seen$lo, 0)
+    expect_lte(seen$hi, 1)
+
+    # the model learned something
+    expect_gt(gl$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
+
+    # a/b/alpha are semantic: a anchors the POSITIVE class mean, b the negative
+    # one, so a > b means the scores point the right way; alpha is a dual variable
+    # projected onto [0, 999] and must stay feasible.
+    loss_fn <- gl$model$torch_model_classif$model$loss_fn
+    expect_gt(as.numeric(loss_fn$a), as.numeric(loss_fn$b))
+    expect_gte(as.numeric(loss_fn$alpha), 0)
+  })
 }
+
