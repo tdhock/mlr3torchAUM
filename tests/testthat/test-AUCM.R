@@ -467,7 +467,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(class_mean(x_all_selected, mask_all)), 1, tolerance = 1e-6)
     x_unused <- torch::torch_tensor(c(9, 9), dtype = torch::torch_float32())
     mask_empty <- torch::torch_tensor(c(0, 0), dtype = torch::torch_float32())
-    expect_true(is.nan(as.numeric(class_mean(x_unused, mask_empty))))
+    expect_true(is.nan(as.numeric(class_mean(x_unused, mask_empty)))) # divided by 0
     x_four <- torch::torch_tensor(c(1, 2, 3, 4), dtype = torch::torch_float32())
     mask_last_two <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
     expect_equal(as.numeric(class_mean(x_four, mask_last_two)), 3.5, tolerance = 1e-6)
