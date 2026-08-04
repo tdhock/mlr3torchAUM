@@ -594,9 +594,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     loss_fn <- nn_AUCM_loss(margin = 1, version = "v2")
-    expect_equal(loss_fn(pred, label)$item(), 0.4662500, tolerance = 1e-6)
+    expect_equal(loss_fn(pred, label)$item(), 0.4662500, tolerance = 1e-6) # gold: see above
     loss_fn_default <- nn_AUCM_loss(margin = 1)
-    expect_equal(loss_fn_default(pred, label)$item(), 0.1165625, tolerance = 1e-6)
+    expect_equal(loss_fn_default(pred, label)$item(), 0.1165625, tolerance = 1e-6) # gold: see above
   })
 
   test_that("test v2 gradients of a, b and alpha", {
@@ -634,5 +634,34 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(loss_fn2$a$grad), -0.55, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn2$b$grad), 0.7, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn2$alpha$grad), 0.35, tolerance = 1e-6)
+  })
+
+  test_that("test v2 e2e", {
+    skip_on_cran()
+    set.seed(1)
+    torch::torch_manual_seed(1)
+    n <- 200
+    x1 <- rnorm(n)
+    x2 <- rnorm(n)
+    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
+    task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
+    torch_loss <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    torch_loss$param_set$set_values(margin = 1, version = "v2")
+    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+    L$loss <- torch_loss
+    L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
+    L$callbacks <- make_pesg_callback(lr = 0.05)
+    L$predict_type <- "prob"
+    L$param_set$set_values(epochs = 30, batch_size = 32, neurons = 8, shuffle = FALSE, seed = 1)
+    L$train(task)
+    expect_equal(L$param_set$values$loss.version, "v2")
+    lf <- L$model$loss_fn
+    a <- as.numeric(lf$a)
+    b <- as.numeric(lf$b)
+    alpha <- as.numeric(lf$alpha)
+    expect_false(any(is.nan(c(a, b, alpha))))
+    expect_gt(a, b)
+    expect_gte(alpha, 0)
+    expect_gt(L$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
   })
 }
