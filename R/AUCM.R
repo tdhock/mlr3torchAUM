@@ -17,6 +17,10 @@ positive_ratio <- function(label_tensor) {
   return(label_tensor_bool$to(torch::torch_float())$mean())
 }
 
+class_mean <- function(x, mask) {
+  torch::torch_sum(x * mask) / torch::torch_sum(mask)
+}
+
 nn_AUCM_loss <- torch::nn_module(
   c("nn_AUCM_loss", "nn_loss"),
   initialize = function(margin = 1) {

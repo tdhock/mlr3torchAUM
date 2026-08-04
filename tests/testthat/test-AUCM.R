@@ -456,4 +456,20 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(m0_t3, c(0.3999999762, 0.7999999523), tolerance = 1e-7)
     expect_equal(m0_t4, c(-2.980232239e-08, -5.960464478e-08), tolerance = 1e-7)
   })
+
+  test_that("test class_mean", {
+    skip_on_cran()
+    x_with_zero <- torch::torch_tensor(c(2, 0, 4), dtype = torch::torch_float32())
+    mask_first_two <- torch::torch_tensor(c(1, 1, 0), dtype = torch::torch_float32())
+    expect_equal(as.numeric(class_mean(x_with_zero, mask_first_two)), 1, tolerance = 1e-6)
+    x_all_selected <- torch::torch_tensor(c(0.5, 1.5), dtype = torch::torch_float32())
+    mask_all <- torch::torch_tensor(c(1, 1), dtype = torch::torch_float32())
+    expect_equal(as.numeric(class_mean(x_all_selected, mask_all)), 1, tolerance = 1e-6)
+    x_unused <- torch::torch_tensor(c(9, 9), dtype = torch::torch_float32())
+    mask_empty <- torch::torch_tensor(c(0, 0), dtype = torch::torch_float32())
+    expect_true(is.nan(as.numeric(class_mean(x_unused, mask_empty))))
+    x_four <- torch::torch_tensor(c(1, 2, 3, 4), dtype = torch::torch_float32())
+    mask_last_two <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    expect_equal(as.numeric(class_mean(x_four, mask_last_two)), 3.5, tolerance = 1e-6)
+  })
 }
