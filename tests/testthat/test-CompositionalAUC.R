@@ -611,7 +611,6 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     x2 <- rnorm(n)
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
     task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
-
     opt <- mlr3torch::as_torch_optimizer(optim_pdsca)
     opt$param_set$set_values(
       lr0 = 0.05, lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
