@@ -472,4 +472,40 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     mask_last_two <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
     expect_equal(as.numeric(class_mean(x_four, mask_last_two)), 3.5, tolerance = 1e-6)
   })
+
+  test_that("test AUCM version = 'v2'", {
+    skip_on_cran()
+    # Goldens from LibAUC 2.0.1, via:
+    #   uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 python <script_name>
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   s = torch.tensor([0.1, 0.4, 0.35, 0.8]).view(-1, 1)
+    #   y = torch.tensor([0., 0., 1., 1.]).view(-1, 1)
+    #   def golden(a, b, al, m=1.0, version='v1'):
+    #       f = AUCMLoss(margin=m, version=version)
+    #       with torch.no_grad():
+    #           f.a.fill_(a); f.b.fill_(b); f.alpha.fill_(al)
+    #       out = float(f(s, y))
+    #       return out / (0.5 * 0.5) if version == 'v1' else out
+    #   golden(0, 0, 0)                        # 0.4662500321865082
+    #   golden(0.3, 0.6, 0.5)                  # 0.6962500214576721
+    #   float(AUCMLoss(margin=1.0, version='v1')(s, y))   # 0.11656250804662704
+    #   golden(0.3, 0.6, 0.5, version='v2')    # 0.5712500214576721, wrong, bug!
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, version = "v2")$item(),
+      0.4662500,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 1, version = "v2")$item(),
+      0.6962500,
+      tolerance = 1e-6
+    )
+    expect_equal(AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1)$item(),
+      0.1165625,
+      tolerance = 1e-6
+    )
+  })
 }

@@ -1,9 +1,18 @@
-AUCM <- function(pred_tensor, label_tensor, a = 0, b = 0, alpha = 0, margin = 1) {
+AUCM <- function(pred_tensor, label_tensor, a = 0, b = 0, alpha = 0, margin = 1,
+                 version = "v1") {
   p <- positive_ratio(label_tensor)
   N <- label_tensor$numel()
   pos_mask <- (label_tensor$flatten() == 1L)$to(torch::torch_float())
   neg_mask <- 1 - pos_mask
   s <- pred_tensor$flatten()
+  if (version == "v2") {
+    return(
+      class_mean((s - a)^2, pos_mask) +
+        class_mean((s - b)^2, neg_mask) +
+        2 * alpha * (margin + class_mean(s, neg_mask) - class_mean(s, pos_mask)) -
+        alpha^2
+    )
+  }
   pos_term <- (1 - p) * ((s - a)^2 * pos_mask)$sum() / N
   neg_term <- p * ((s - b)^2 * neg_mask)$sum() / N
   cross <- 2 * alpha * (p * (1 - p) * margin + (p * s * neg_mask - (1 - p) * s * pos_mask)$sum() / N)
