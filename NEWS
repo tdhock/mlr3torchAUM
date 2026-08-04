@@ -9,6 +9,14 @@ Changes in version 2026.8.8
 
 - RandomOverSampler implemented for random over-sampling with optional smoothed bootstrap (ROSE method), ported from Python imbalanced-learn reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
 
+Changes in version 2026.8.4
+- nn_AUCM_loss() and AUCM() gain a version argument: "v1" (default, LibAUC's
+  prior-weighted form) and "v2" (class-conditional form, v1 / (p * (1 - p))).
+- "v2" follows arXiv:2012.03173 and deliberately differs from LibAUC 2.0.1's
+  version='v2', which misplaces a paren in the cross term and uses
+  count_nonzero() as a class size; see ?nn_AUCM_loss for both deviations.
+- "v2" requires both classes in every batch, otherwise the loss is NaN.
+
 Changes in version 2026.7.7
 - SMOTENC over-sampler for mixed nominal (categorical) and continuous features ported from Python imbalanced-learn. Continuous features are interpolated as in SMOTE and each categorical feature takes the neighbours' mode as in SMOTEN; neighbours use a distance combining the continuous Euclidean distance with a median-standard-deviation penalty for every mismatching categorical feature. Inherits SMOTE.
 
@@ -25,7 +33,6 @@ Changes in version 2026.7.1
 Changes in version 2026.6.29
 
 - nn_pairwise_auc_loss and pairwise_auc_surrogates implemented as a surrogate loss for pairwise AUC optimization, from Python libauc reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
-
 
 Changes in version 2025.9.23 (PR#3)
 
