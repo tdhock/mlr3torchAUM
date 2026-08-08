@@ -123,5 +123,88 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     taken <- dual_take(c(1, 2), ptr = 2, need = 3)$taken
     expect_equal(length(taken), 3)
     expect_true(all(taken %in% c(1, 2)))
+    # carries the pointer to the next calling
+    set.seed(1)
+    pos <- c(3, 6, 8, 11)
+    neg <- c(1, 2, 4, 5, 7, 9, 10, 12)
+    first <- dual_batch_list(pos, neg, num_pos = 2, num_neg = 4, num_batches = 1)
+    expect_equal(first$batches[[1]], c(3, 6, 1, 2, 4, 5))
+    expect_equal(first$pos_ptr, 2)
+    expect_equal(first$neg_ptr, 4)
+    second <- dual_batch_list(first$pos_pool, first$neg_pool,
+      num_pos = 2, num_neg = 4, num_batches = 1,
+      pos_ptr = first$pos_ptr, neg_ptr = first$neg_ptr
+    )
+    expect_equal(second$batches[[1]], c(8, 11, 7, 9, 10, 12))
+  })
+
+  test_that("test batch_sampler_dual", {
+    skip_on_cran()
+    # Reproduces LibAUC's first epoch end to end, through the sampler:
+    #
+    #   uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' \
+    #     --python 3.11 python
+    #   from libauc.sampler import DualSampler
+    #   labels = [0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
+    #   s = DualSampler(None, batch_size=6, labels=labels, shuffle=False,
+    #                   sampling_rate=1/3)
+    #   print(s.num_pos, s.num_neg, s.num_batches)   # 2 4 2
+    #   print([int(i) for i in s])                   # 0-based first epoch:
+    #   # [2, 5, 0, 1, 3, 4, 7, 10, 6, 8, 9, 11]
+    set.seed(1)
+    labels <- c(0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0)
+    task <- mlr3::TaskClassif$new("dual",
+      data.frame(
+        x = seq_along(labels),
+        y = factor(ifelse(labels == 1, "pos", "neg"), levels = c("neg", "pos"))
+      ),
+      target = "y", positive = "pos"
+    )
+    sampler <- batch_sampler_dual(
+      batch_size = 6, sampling_rate = 1 / 3,
+      shuffle = FALSE
+    )(list(task = task))
+    expect_equal(sampler$batch_size, 6)
+    expect_equal(length(sampler$batch_list), 2)
+    expect_equal(unlist(sampler$batch_list), c(3, 6, 1, 2, 4, 5, 8, 11, 7, 9, 10, 12))
+    # fixes the positive count per batch
+    set.seed(1)
+    labels <- c(rep(1, 5), rep(0, 40))
+    task <- mlr3::TaskClassif$new("imbalanced",
+      data.frame(
+        x = seq_along(labels),
+        y = factor(ifelse(labels == 1, "pos", "neg"), levels = c("neg", "pos"))
+      ),
+      target = "y", positive = "pos"
+    )
+    sampler <- batch_sampler_dual(batch_size = 10, sampling_rate = 0.3)(list(task = task))
+    positives <- which(labels == 1)
+    for (batch in sampler$batch_list) {
+      # int(0.3 * 10) = 3 positives in every batch, however rare they are.
+      expect_equal(sum(batch %in% positives), 3)
+      expect_equal(length(batch), 10)
+    }
+    # reproducible given a random seed
+    labels <- c(rep(1, 5), rep(0, 40))
+    task <- mlr3::TaskClassif$new("seeded",
+      data.frame(
+        x = seq_along(labels),
+        y = factor(ifelse(labels == 1, "pos", "neg"), levels = c("neg", "pos"))
+      ),
+      target = "y", positive = "pos"
+    )
+    sampler1 <- batch_sampler_dual(
+      batch_size = 10, sampling_rate = 0.3, random_seed = 42
+    )(list(task = task))
+    sampler2 <- batch_sampler_dual(
+      batch_size = 10, sampling_rate = 0.3, random_seed = 42
+    )(list(task = task))
+    expect_equal(sampler1$batch_list, sampler2$batch_list)
+    # rejects a single-class task, blocked by dual_class_indices
+    task <- mlr3::TaskClassif$new("one_class",
+      data.frame(x = 1:6, y = factor(rep("neg", 6), levels = c("neg", "pos"))),
+      target = "y", positive = "pos"
+    )
+    expect_error(batch_sampler_dual(batch_size = 4)(list(task = task)))
   })
 }
