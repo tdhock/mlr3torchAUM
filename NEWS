@@ -4,6 +4,15 @@ Changes in version 2026.8.9
   fixed instead of re-estimated from every batch. NULL (default) keeps the
   batch estimate; "v2" ignores it, having no prior.
 
+Changes in version 2026.8.8
+
+- New batch_sampler_dual(): a fixed positive-negative 
+  ratio batch sampler ported from LibAUC's DualSampler.
+  In each batch, to guarantee a fixed positive sampler number,
+  plain oversampling may be applied on the minority class
+  once its pool is exhausted; suitable for losses which require
+  the existence of both classes in each batch.
+
 Changes in version 2026.8.4
 
 - nn_CompositionalAUC_loss(): R/torch port of LibAUC's CompositionalAUCLoss.
