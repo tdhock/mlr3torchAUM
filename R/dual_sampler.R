@@ -29,9 +29,9 @@ dual_take <- function(pool, ptr, need) {
   }
   num_loops <- (need - (pool_length - ptr)) %/% pool_length
   new_ptr <- (ptr + need) %% pool_length
-  taken <- c(pool[ptr + seq_len(pool_length - ptr)], rep(pool, num_loops))
+  tail_part <- pool[ptr + seq_len(pool_length - ptr)]
   pool <- sample(pool)
-  taken <- c(taken, pool[seq_len(new_ptr)])
+  taken <- c(tail_part, rep(pool, num_loops), pool[seq_len(new_ptr)])
   list(pool = pool, ptr = new_ptr, taken = taken)
 }
 

@@ -27,8 +27,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_error(dual_class_indices(c(0, 1, 2)))
   })
 
-  test_that("test dual_batch_list without wrap", {
+  test_that("test dual_batch_list", {
     skip_on_cran()
+    # without wrap
     # uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 python
     #   from libauc.sampler import DualSampler
     #   labels = [0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0]
@@ -49,10 +50,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       expect_true(all(batch[1:2] %in% indices$pos))
       expect_true(all(batch[3:6] %in% indices$neg))
     }
-  })
-
-  test_that("test dual_batch_list with wrap", {
-    skip_on_cran()
+    # with wrap
     #   from libauc.sampler import DualSampler
     #   labels = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0]
     #   s = DualSampler(None, batch_size=5, labels=labels, shuffle=False,
@@ -82,6 +80,14 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(length(unlist(drawn_neg)), 6)
     expect_equal(length(unique(unlist(drawn_neg))), 6)
     expect_true(all(unlist(batches) %in% seq_along(labels)))
+    # empty list
+    set.seed(1)
+    labels <- c(1, 0, 0, 0, 0, 1, 0, 0, 0, 0)
+    indices <- dual_class_indices(labels)
+    batches <- dual_batch_list(indices$pos, indices$neg,
+      num_pos = 2, num_neg = 3, num_batches = 0
+    )
+    expect_equal(length(batches), 0)
   })
 
   test_that("test dual_take", {
