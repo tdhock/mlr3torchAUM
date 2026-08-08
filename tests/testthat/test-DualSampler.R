@@ -207,4 +207,38 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     )
     expect_error(batch_sampler_dual(batch_size = 4)(list(task = task)))
   })
+
+  test_that("e2e: test batch_sampler_dual on a severely imbalanced task", {
+    skip_on_cran()
+    # 2% positives, very imbalanced
+    set.seed(1)
+    n <- 500
+    n_pos <- 10
+    labels <- c(rep(1, n_pos), rep(0, n - n_pos))
+    task <- mlr3::TaskClassif$new("imbalanced",
+      data.frame(
+        x = seq_len(n),
+        y = factor(ifelse(labels == 1, "pos", "neg"), levels = c("neg", "pos"))
+      ),
+      target = "y", positive = "pos"
+    )
+    sampler <- batch_sampler_dual(batch_size = 32, sampling_rate = 0.1)(list(task = task))
+    expect_equal(sampler$num_pos, 3) # as.integer(0.1 * 32)
+    expect_equal(sampler$num_neg, 29)
+    expect_equal(sampler$num_batches, 16) # max(10 %/% 3, 490 %/% 29)
+    positives <- which(labels == 1)
+    counts <- sapply(sampler$batch_list, function(batch) sum(batch %in% positives))
+    expect_true(all(counts == 3))
+    expect_true(all(lengths(sampler$batch_list) == 32))
+    expect_equal(sum(counts), 48) # 16 batches * 3 positives
+    expect_equal(length(unique(unlist(sampler$batch_list)[
+      unlist(sampler$batch_list) %in% positives
+    ])), n_pos) # get all positive samples
+    # Contrast with plain random
+    set.seed(1)
+    random_batches <- split(sample(n), ceiling(seq_len(n) / 32))
+    random_counts <- sapply(random_batches, function(batch) sum(batch %in% positives))
+    expect_gt(sum(random_counts == 0), 0)
+    expect_equal(sum(counts == 0), 0)
+  })
 }
