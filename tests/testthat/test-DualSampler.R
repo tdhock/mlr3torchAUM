@@ -42,7 +42,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     indices <- dual_class_indices(labels)
     batches <- dual_batch_list(indices$pos, indices$neg,
       num_pos = 2, num_neg = 4, num_batches = 2
-    )
+    )$batches
     expect_equal(length(batches), 2)
     expect_equal(lengths(batches), c(6, 6))
     expect_equal(unlist(batches), c(3, 6, 1, 2, 4, 5, 8, 11, 7, 9, 10, 12)) # 1-based
@@ -62,7 +62,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(indices$pos, c(1, 6))
     batches <- dual_batch_list(indices$pos, indices$neg,
       num_pos = 2, num_neg = 3, num_batches = 2
-    )
+    )$batches
     expect_equal(length(batches), 2)
     expect_equal(lengths(batches), c(5, 5))
     drawn_pos <- list()
@@ -86,7 +86,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     indices <- dual_class_indices(labels)
     batches <- dual_batch_list(indices$pos, indices$neg,
       num_pos = 2, num_neg = 3, num_batches = 0
-    )
+    )$batches
     expect_equal(length(batches), 0)
   })
 

@@ -35,18 +35,22 @@ dual_take <- function(pool, ptr, need) {
   list(pool = pool, ptr = new_ptr, taken = taken)
 }
 
-dual_batch_list <- function(pos_pool, neg_pool, num_pos, num_neg, num_batches) {
+dual_batch_list <- function(
+  pos_pool, neg_pool, num_pos, num_neg, num_batches,
+  pos_ptr = 0, neg_ptr = 0
+) {
   res <- vector("list", num_batches)
-  ptr_pos <- 0
-  ptr_neg <- 0
   for (i in seq_len(num_batches)) {
-    res_pos <- dual_take(pos_pool, ptr_pos, num_pos)
-    res_neg <- dual_take(neg_pool, ptr_neg, num_neg)
+    res_pos <- dual_take(pos_pool, pos_ptr, num_pos)
+    res_neg <- dual_take(neg_pool, neg_ptr, num_neg)
     res[[i]] <- c(res_pos$taken, res_neg$taken)
     pos_pool <- res_pos$pool
     neg_pool <- res_neg$pool
-    ptr_pos <- res_pos$ptr
-    ptr_neg <- res_neg$ptr
+    pos_ptr <- res_pos$ptr
+    neg_ptr <- res_neg$ptr
   }
-  res
+  list(
+    batches = res, pos_pool = pos_pool, neg_pool = neg_pool,
+    pos_ptr = pos_ptr, neg_ptr = neg_ptr
+  )
 }
