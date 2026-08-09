@@ -14,7 +14,9 @@ AUCM(pred_tensor, label_tensor, a = 0, b = 0, alpha = 0, margin = 1,
 }
 \arguments{
 \item{margin}{desired gap between positive and negative score means. Its
-scale has to match the scale of \code{pred_tensor}}
+scale has to match the scale of \code{pred_tensor}. Since we require
+\code{pred_tensor} to be passed into \code{sigmoid} to end up in range
+(0,1), \code{margin} as \code{1} means the maximum value.}
 \item{version}{\code{"v1"} (default) weights each term by the class prior
 \code{p}; \code{"v2"} drops \code{p} and averages within each class.}
 \item{imratio}{class prior \code{p} for \code{"v1"}, as a single number in
