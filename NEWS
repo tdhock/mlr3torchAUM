@@ -1,4 +1,10 @@
-Changes in version 2026.8.11
+Changes in version 2026.8.9
+
+- nn_AUCM_loss() and AUCM() gain an imratio argument: the "v1" class prior,
+  fixed instead of re-estimated from every batch. NULL (default) keeps the
+  batch estimate; "v2" ignores it, having no prior.
+
+Changes in version 2026.8.4
 
 - nn_CompositionalAUC_loss(): R/torch port of LibAUC's CompositionalAUCLoss.
   Alternates k cross-entropy batches with k AUC-margin batches. Used together
@@ -12,9 +18,6 @@ Changes in version 2026.8.8
 Changes in version 2026.8.4
 - nn_AUCM_loss() and AUCM() gain a version argument: "v1" (default, LibAUC's
   prior-weighted form) and "v2" (class-conditional form, v1 / (p * (1 - p))).
-- "v2" follows arXiv:2012.03173 and deliberately differs from LibAUC 2.0.1's
-  version='v2', which misplaces a paren in the cross term and uses
-  count_nonzero() as a class size; see ?nn_AUCM_loss for both deviations.
 - "v2" requires both classes in every batch, otherwise the loss is NaN.
 
 Changes in version 2026.7.7

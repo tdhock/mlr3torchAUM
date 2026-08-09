@@ -1,7 +1,11 @@
 Package: mlr3torchAUM
 Type: Package
 Title: Area Under the Minimum Learning for 'mlr3torch' Framework
+<<<<<<< HEAD
 Version: 2026.8.11
+=======
+Version: 2026.8.9
+>>>>>>> 6abf902 (MISC1: DESCRIPTION NEWS)
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
