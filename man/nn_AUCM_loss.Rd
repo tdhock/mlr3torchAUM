@@ -8,16 +8,20 @@ maximization.
 Train with \code{\link{make_pesg_callback}}.
 }
 \usage{
-nn_AUCM_loss(margin = 1, version = "v1")
+nn_AUCM_loss(margin = 1, version = "v1", imratio = NULL)
 AUCM(pred_tensor, label_tensor, a = 0, b = 0, alpha = 0, margin = 1,
-     version = "v1")
+     version = "v1", imratio = NULL)
 }
 \arguments{
-\item{margin}{desired gap between positive and negative score means.}
-\item{version}{\code{"v1"} (default) weights each term by the batch class
-prior \code{p}; \code{"v2"} drops \code{p} and averages within each class.
-See Details.}
-\item{pred_tensor}{tensor of predicted scores after sigmoid, ranging from 0 to 1}
+\item{margin}{desired gap between positive and negative score means. Its
+scale has to match the scale of \code{pred_tensor}}
+\item{version}{\code{"v1"} (default) weights each term by the class prior
+\code{p}; \code{"v2"} drops \code{p} and averages within each class.}
+\item{imratio}{class prior \code{p} for \code{"v1"}, as a single number in
+\code{(0, 1)}. \code{NULL} (default) estimates it from each batch. Ignored
+by \code{"v2"}, which has no class prior.}
+\item{pred_tensor}{tensor of predicted scores, with the last layer 
+as \code{sigmoid} to fix the values within (0,1)}
 \item{label_tensor}{tensor of labels, 1 for positive, 0 for negative}
 \item{a}{center of positive scores.}
 \item{b}{center of negative scores.}
