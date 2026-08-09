@@ -664,4 +664,38 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_gte(alpha, 0)
     expect_gt(L$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
   })
+
+  test_that("test new parameter imratio", {
+    skip_on_cran()
+    #   uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 <script.py>
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   s = torch.tensor([0.1, 0.4, 0.35, 0.8]).view(-1, 1)
+    #   y = torch.tensor([0., 0., 1., 1.]).view(-1, 1) # batch p = 0.5
+    #   f = AUCMLoss(margin=1.0, imratio=0.01, version='v1')
+    #   with torch.no_grad():
+    #       f.a.fill_(0.3); f.b.fill_(0.6); f.alpha.fill_(0.5)
+    #   float(f(s, y, auto=False)) # --0.2127312421798706
+    #   AUCMLoss(margin=1.0, imratio=0.01, version='v1')(s, y, auto=False) # 0.18914376199245453
+    #   AUCMLoss(margin=1.0, imratio=0.25, version='v1')(s, y, auto=False) # 0.1535937637090683
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, imratio = 0.01)$item(),
+      0.1891438,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, imratio = 0.25)$item(),
+      0.1535938,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred, label,
+        a = 0.3, b = 0.6, alpha = 0.5, margin = 1, imratio = 0.01
+      )$item(),
+      -0.2127312,
+      tolerance = 1e-6
+    )
+  })
 }

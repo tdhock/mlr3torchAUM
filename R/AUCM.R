@@ -1,7 +1,5 @@
 AUCM <- function(pred_tensor, label_tensor, a = 0, b = 0, alpha = 0, margin = 1,
-                 version = "v1") {
-  p <- positive_ratio(label_tensor)
-  N <- label_tensor$numel()
+                 version = "v1", imratio = NULL) {
   pos_mask <- (label_tensor$flatten() == 1L)$to(torch::torch_float())
   neg_mask <- 1 - pos_mask
   s <- pred_tensor$flatten()
@@ -13,6 +11,11 @@ AUCM <- function(pred_tensor, label_tensor, a = 0, b = 0, alpha = 0, margin = 1,
         alpha^2
     )
   }
+  p <- imratio
+  if (is.null(p)) {
+    p <- positive_ratio(label_tensor)
+  } else if (p <= 0 || p >= 1) stop("imratio out of range")
+  N <- label_tensor$numel()
   pos_term <- (1 - p) * ((s - a)^2 * pos_mask)$sum() / N
   neg_term <- p * ((s - b)^2 * neg_mask)$sum() / N
   cross <- 2 * alpha * (p * (1 - p) * margin + (p * s * neg_mask - (1 - p) * s * pos_mask)$sum() / N)
@@ -32,14 +35,15 @@ class_mean <- function(x, mask) {
 
 nn_AUCM_loss <- torch::nn_module(
   c("nn_AUCM_loss", "nn_loss"),
-  initialize = function(margin = 1, version = "v1") {
+  initialize = function(margin = 1, version = "v1", imratio = NULL) {
     self$a <- torch::nn_parameter(torch::torch_zeros(1))
     self$b <- torch::nn_parameter(torch::torch_zeros(1))
     self$alpha <- torch::nn_parameter(torch::torch_zeros(1))
     self$margin <- margin
     self$version <- version
+    self$imratio <- imratio
   },
   forward = function(pred_tensor, label_tensor) {
-    AUCM(pred_tensor, label_tensor, self$a, self$b, self$alpha, self$margin, self$version)
+    AUCM(pred_tensor, label_tensor, self$a, self$b, self$alpha, self$margin, self$version, self$imratio)
   }
 )
