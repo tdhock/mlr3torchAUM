@@ -1,3 +1,7 @@
+Changes in version 2026.8.8
+
+- RandomOverSampler implemented for random over-sampling with optional smoothed bootstrap (ROSE method), ported from Python imbalanced-learn reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
+
 Changes in version 2026.7.7
 - SMOTENC over-sampler for mixed nominal (categorical) and continuous features ported from Python imbalanced-learn. Continuous features are interpolated as in SMOTE and each categorical feature takes the neighbours' mode as in SMOTEN; neighbours use a distance combining the continuous Euclidean distance with a median-standard-deviation penalty for every mismatching categorical feature. Inherits SMOTE.
 
