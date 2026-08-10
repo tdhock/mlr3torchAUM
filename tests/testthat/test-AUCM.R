@@ -652,7 +652,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
     task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
     torch_loss <- mlr3torch::as_torch_loss(nn_AUCM_loss)
-    torch_loss$param_set$set_values(margin = 1, version = "v2", add_sigmoid=FALSE)
+    torch_loss$param_set$set_values(margin = 1, version = "v2") # ensure feed the loss probs
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
     L$loss <- torch_loss
     L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
