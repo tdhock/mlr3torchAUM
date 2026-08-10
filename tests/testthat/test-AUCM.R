@@ -704,4 +704,45 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       tolerance = 1e-6
     )
   })
+
+  test_that("test new parameter add_sigmoid", {
+    skip_on_cran()
+    prob <- c(0.1, 0.4, 0.35, 0.8)
+    logit <- torch::torch_tensor(qlogis(prob)) # sigmoid(qlogis(p)) == p
+    pred <- torch::torch_tensor(prob)
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      nn_AUCM_loss(margin = 1)(logit, label)$item(),
+      AUCM(pred, label, margin = 1)$item(),
+      tolerance = 1e-6
+    )
+    expect_equal(
+      nn_AUCM_loss(margin = 1, version = "v2")(logit, label)$item(),
+      AUCM(pred, label, margin = 1, version = "v2")$item(),
+      tolerance = 1e-6
+    )
+    off <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)(logit, label)$item()
+    expect_false(isTRUE(all.equal(off, AUCM(pred, label, margin = 1)$item(),
+      tolerance = 1e-6
+    )))
+    expect_equal(off, AUCM(logit, label, margin = 1)$item(), tolerance = 1e-6)
+    expect_true(nn_AUCM_loss(margin = 1)$add_sigmoid)
+    expect_false(nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)$add_sigmoid)
+    loss_fn <- nn_AUCM_loss(margin = 1) # add_sigmoid = TRUE by default
+    loss <- loss_fn(logit, label) # feed with logits
+    expect_true(loss$requires_grad)
+    loss$backward()
+    grads <- c(
+      as.numeric(loss_fn$a$grad), as.numeric(loss_fn$b$grad),
+      as.numeric(loss_fn$alpha$grad)
+    )
+    expect_false(any(is.nan(grads)))
+    expect_true(all(is.finite(grads)))
+    # Values identical to Step7
+    expect_equal(grads, c(-0.2875, -0.125, 0.3375), tolerance = 1e-6)
+    scores <- torch::torch_tensor(qlogis(prob), requires_grad = TRUE)
+    nn_AUCM_loss(margin = 1)(scores, label)$backward()
+    expect_false(any(is.nan(as.numeric(scores$grad))))
+    expect_equal(length(as.numeric(scores$grad)), length(prob))
+  })
 }
