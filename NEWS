@@ -1,3 +1,7 @@
+Changes in version 2026.8.8
+
+- RandomOverSampler implemented for random over-sampling with optional smoothed bootstrap (ROSE method), ported from Python imbalanced-learn reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
+
 Changes in version 2026.7.1
 
 - SMOTE over-sampler ported from Python imbalanced-learn. Faithful BaseSampler -> BaseOverSampler -> BaseSMOTE -> SMOTE class hierarchy from imbalanced-learn's design.
