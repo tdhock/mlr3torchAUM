@@ -35,15 +35,17 @@ class_mean <- function(x, mask) {
 
 nn_AUCM_loss <- torch::nn_module(
   c("nn_AUCM_loss", "nn_loss"),
-  initialize = function(margin = 1, version = "v1", imratio = NULL) {
+  initialize = function(margin = 1, version = "v1", imratio = NULL, add_sigmoid = TRUE) {
     self$a <- torch::nn_parameter(torch::torch_zeros(1))
     self$b <- torch::nn_parameter(torch::torch_zeros(1))
     self$alpha <- torch::nn_parameter(torch::torch_zeros(1))
     self$margin <- margin
     self$version <- version
     self$imratio <- imratio
+    self$add_sigmoid <- add_sigmoid
   },
   forward = function(pred_tensor, label_tensor) {
+    if (self$add_sigmoid) pred_tensor <- torch::torch_sigmoid(pred_tensor)
     AUCM(pred_tensor, label_tensor, self$a, self$b, self$alpha, self$margin, self$version, self$imratio)
   }
 )

@@ -8,7 +8,7 @@ maximization.
 Train with \code{\link{make_pesg_callback}}.
 }
 \usage{
-nn_AUCM_loss(margin = 1, version = "v1", imratio = NULL)
+nn_AUCM_loss(margin = 1, version = "v1", imratio = NULL, add_sigmoid=TRUE)
 AUCM(pred_tensor, label_tensor, a = 0, b = 0, alpha = 0, margin = 1,
      version = "v1", imratio = NULL)
 }
@@ -22,6 +22,10 @@ scale has to match the scale of \code{pred_tensor}. Since we require
 \item{imratio}{class prior \code{p} for \code{"v1"}, as a single number in
 \code{(0, 1)}. \code{NULL} (default) estimates it from each batch. Ignored
 by \code{"v2"}, which has no class prior.}
+\item{add_sigmoid}{Convert the logits produced by network to probabilities
+by \code{sigmoid} function. Default is \code{TRUE}. This parameter only
+exists in \code{nn_AUCM_loss}, while \code{AUCM} assumes that \code{pred_tensor}
+is already probabilities.}
 \item{pred_tensor}{tensor of predicted scores, with the last layer 
 as \code{sigmoid} to fix the values within (0,1)}
 \item{label_tensor}{tensor of labels, 1 for positive, 0 for negative}

@@ -52,7 +52,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
   })
   test_that("Step6: nn_AUCM_loss exposes a/b/alpha as trainable parameters", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss()
+    loss_fn <- nn_AUCM_loss(add_sigmoid = FALSE)
     # a/b/alpha are parameters, with initial value of 0
     expect_equal(loss_fn$a$item(), 0, tolerance = 1e-6)
     expect_equal(loss_fn$b$item(), 0, tolerance = 1e-6)
@@ -66,7 +66,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step7: gradients flow; alpha's grad sign exposes the min-max", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss() # a=b=alpha=0, margin=1
+    loss_fn <- nn_AUCM_loss(add_sigmoid = FALSE) # a=b=alpha=0, margin=1
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     loss <- loss_fn(pred, label)
@@ -84,7 +84,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step9: pesg_alpha_step ascends alpha toward (margin+b-a), clamps >= 0", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss(margin = 1)
+    loss_fn <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)
     torch::with_no_grad({
       # target = margin - (0.575-0.25) = 0.675
       loss_fn$a$fill_(0.575)
@@ -98,7 +98,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     for (i in 1:200) pesg_alpha_step(loss_fn, lr = 0.1)
     expect_equal(loss_fn$alpha$item(), 0.675, tolerance = 1e-4)
     # when target is negative, clamp to 0，no penalties
-    loss_fn2 <- nn_AUCM_loss(margin = 0.1)
+    loss_fn2 <- nn_AUCM_loss(margin = 0.1, add_sigmoid = FALSE)
     torch::with_no_grad({
       # target = margin - (1-0) = -0.9
       loss_fn2$a$fill_(1)
@@ -111,7 +111,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step10: pesg_step descends a/b, ascends alpha, zeros grads", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss(margin = 1) # a=b=alpha=0
+    loss_fn <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE) # a=b=alpha=0
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     loss <- loss_fn(pred, label)
@@ -136,7 +136,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
     task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
-    L$loss <- nn_AUCM_loss
+    tl <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    tl$param_set$set_values(add_sigmoid = FALSE)
+    L$loss <- tl
     L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
     L$callbacks <- make_pesg_callback(lr = 0.05)
     L$predict_type <- "prob"
@@ -181,7 +183,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step14: pesg_step/callback mode='adam' uses Adam for a/b (Route A+)", {
     skip_on_cran()
-    lf <- nn_AUCM_loss(margin = 1)
+    lf <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     lf(pred, label)$backward()
@@ -200,7 +202,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
     task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
-    L$loss <- nn_AUCM_loss
+    tl <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    tl$param_set$set_values(add_sigmoid = FALSE)
+    L$loss <- tl
     L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
     L$callbacks <- make_pesg_callback(lr = 0.05, mode = "adam")
     L$predict_type <- "prob"
@@ -340,7 +344,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step 23: pesg full step for loss parameters", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss(margin = 1)
+    loss_fn <- nn_AUCM_loss(margin = 1, add_sigmoid=FALSE)
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
@@ -383,7 +387,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
     task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
-    L$loss <- nn_AUCM_loss
+    tl <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    tl$param_set$set_values(add_sigmoid = FALSE)
+    L$loss <- tl
     opt <- mlr3torch::as_torch_optimizer(optim_pesg)
     opt$param_set$set_values(
       lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
@@ -593,9 +599,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     skip_on_cran()
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
-    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2")
+    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2", add_sigmoid=FALSE)
     expect_equal(loss_fn(pred, label)$item(), 0.4662500, tolerance = 1e-6) # gold: see above
-    loss_fn_default <- nn_AUCM_loss(margin = 1)
+    loss_fn_default <- nn_AUCM_loss(margin = 1, add_sigmoid=FALSE)
     expect_equal(loss_fn_default(pred, label)$item(), 0.1165625, tolerance = 1e-6) # gold: see above
   })
 
@@ -617,14 +623,14 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     #   grads(0.3, 0.6, 0.5, S, Y)  # [-0.5499999523162842, 0.7000000476837158, 0.3500000238418579]
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
-    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2")
+    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2", add_sigmoid=FALSE)
     loss <- loss_fn(pred, label)
     expect_true(loss$requires_grad)
     loss$backward()
     expect_equal(as.numeric(loss_fn$a$grad), -1.15, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn$b$grad), -0.5, tolerance = 1e-6)
     expect_equal(as.numeric(loss_fn$alpha$grad), 1.35, tolerance = 1e-6)
-    loss_fn2 <- nn_AUCM_loss(margin = 1, version = "v2")
+    loss_fn2 <- nn_AUCM_loss(margin = 1, version = "v2", add_sigmoid=FALSE)
     torch::with_no_grad({
       loss_fn2$a$fill_(0.3)
       loss_fn2$b$fill_(0.6)
@@ -646,7 +652,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
     task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
     torch_loss <- mlr3torch::as_torch_loss(nn_AUCM_loss)
-    torch_loss$param_set$set_values(margin = 1, version = "v2")
+    torch_loss$param_set$set_values(margin = 1, version = "v2", add_sigmoid=FALSE)
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
     L$loss <- torch_loss
     L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
