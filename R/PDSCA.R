@@ -29,12 +29,16 @@ pdsca_ce_weight_step <- function(p, grad,
   torch::with_no_grad({
     dp <- pesg_d_p(grad, p, clamp_value, weight_decay, epoch_decay, model_ref)
     p$sub_(lr0 * dp)
-    if (is.null(buffer)) {
-      buffer_new <- p$clone()
+    if (weight_momentum != 0) {
+      if (is.null(buffer)) {
+        buffer_new <- p$clone()
+      } else {
+        buffer_new <- pdsca_buffer_weight_momentum(p, buffer, weight_momentum)
+      }
+      p$copy_(buffer_new)
     } else {
-      buffer_new <- pdsca_buffer_weight_momentum(p, buffer, weight_momentum)
+      buffer_new <- buffer # don't update d_p, naive SGD
     }
-    p$copy_(buffer_new)
     res <- list(buffer = buffer_new, model_acc = model_acc + p)
   })
   return(res)
