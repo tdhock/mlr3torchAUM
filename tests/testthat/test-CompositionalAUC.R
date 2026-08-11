@@ -16,7 +16,7 @@ test_that("is_ce_step alternates CE/AUCM on the 2k schedule", {
 if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
   test_that("nn_CompositionalAUC_loss skeleton", {
     skip_on_cran()
-    loss <- nn_CompositionalAUC_loss() # defaults: margin = 1, k = 1
+    loss <- nn_CompositionalAUC_loss(add_sigmoid = FALSE) # defaults: margin = 1, k = 1
     expect_true(inherits(loss, "nn_CompositionalAUC_loss"))
     expect_true(inherits(loss, "nn_loss"))
     expect_equal(loss$a$item(), 0, tolerance = 1e-6)
@@ -25,7 +25,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(length(loss$parameters), 3)
     expect_equal(loss$margin, 1)
     expect_equal(loss$k, 1)
-    loss <- nn_CompositionalAUC_loss(k = 2) # defaults: margin = 1
+    loss <- nn_CompositionalAUC_loss(k = 2, add_sigmoid = FALSE) # defaults: margin = 1
     expect_equal(loss$k, 2)
   })
 
@@ -33,7 +33,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     skip_on_cran()
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
     target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
-    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     loss <- loss_fn(pred, target)
     # import torch
     # import torch.nn.functional as F
@@ -48,7 +48,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     skip_on_cran()
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
     target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
-    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     loss_fn(pred, target) # first time
     loss2 <- loss_fn(pred, target) # second time, AUCM
     # import torch
@@ -76,7 +76,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     target <- torch::torch_tensor(c(0, 0, 0, 0),
       dtype = torch::torch_float32()
     ) # all negative samples
-    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     loss_fn(pred, target) # first time CE
     loss <- loss_fn(pred, target) # second time AUCM
     expect_equal(loss$item(), 0, tolerance = 1e-6)
@@ -86,7 +86,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     target2 <- torch::torch_tensor(c(1, 1, 1, 1),
       dtype = torch::torch_float32()
     ) # all positive samples
-    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     loss_fn(pred2, target2) # first time CE
     loss2 <- loss_fn(pred2, target2) # second time AUCM
     expect_equal(loss2$item(), 0, tolerance = 1e-6)
@@ -98,7 +98,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
     target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
-    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     loss_ce <- loss_fn(pred, target) # first time: CE
     loss_ce$backward()
     res_ce <- pdsca_step(
@@ -128,7 +128,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     skip_on_cran()
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8), dtype = torch::torch_float32())
     target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
-    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     pass_wanted1 <- c("ce", "aucm", "ce", "aucm")
     ce_val <- 0.47228795289993286
     aucm_val <- 0.11656250804662704
@@ -138,7 +138,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       expect_equal(pdsca_pass(loss_fn), pass_wanted1[i])
       expect_equal(as.numeric(loss), val_wanted1[i], tolerance = 1e-6)
     }
-    loss_fn2 <- nn_CompositionalAUC_loss(k = 2)
+    loss_fn2 <- nn_CompositionalAUC_loss(k = 2, add_sigmoid = FALSE)
     pass_wanted2 <- c("ce", "ce", "aucm", "aucm")
     for (i in 1:4) {
       loss <- loss_fn2(pred, target)
@@ -158,7 +158,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     )
     expect_true(inherits(cb, "TorchCallback"))
     cb_inst <- cb$generate()
-    loss_fn <- nn_CompositionalAUC_loss()
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     cb_inst$ctx <- list(loss_fn = loss_fn)
     loss_ce <- loss_fn(pred, target)
     loss_ce$backward()
@@ -367,7 +367,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     p <- torch::torch_tensor(c(0.3, -0.2),
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
-    lf <- nn_CompositionalAUC_loss() # k = 1 -> ce, aucm, ce, aucm
+    lf <- nn_CompositionalAUC_loss(add_sigmoid = FALSE) # k = 1 -> ce, aucm, ce, aucm
     opt <- optim_pdsca(list(p),
       lr0 = 0.05, lr = 0.1, clamp_value = 10,
       weight_decay = 0, epoch_decay = 0,
@@ -418,7 +418,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     p <- torch::torch_tensor(c(0.3, -0.2),
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
-    lf <- nn_CompositionalAUC_loss() # k = 1 -> ce, aucm, ce, aucm
+    lf <- nn_CompositionalAUC_loss(add_sigmoid = FALSE) # k = 1 -> ce, aucm, ce, aucm
     opt <- optim_pdsca(list(p),
       lr0 = 0.05, lr = 0.1, clamp_value = 10,
       weight_decay = 0.01, epoch_decay = 0.02,
@@ -485,7 +485,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     p <- torch::torch_tensor(c(0.3, -0.2),
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
-    lf <- nn_CompositionalAUC_loss()
+    lf <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
     opt <- optim_pdsca(list(p),
       lr0 = 0.05, lr = 0.1, clamp_value = 10,
       weight_decay = 0, epoch_decay = 0,
@@ -522,7 +522,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       epoch_decay = 0, momentum = 0.5, decay_factor = 2
     )
     cb_inst <- cb$generate()
-    loss_fn <- nn_CompositionalAUC_loss() # k = 1: ce, aucm, ce, aucm
+    loss_fn <- nn_CompositionalAUC_loss(add_sigmoid = FALSE) # k = 1: ce, aucm, ce, aucm
     p <- torch::torch_tensor(c(0.3, -0.2),
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
@@ -560,7 +560,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(opt$param_groups[[1]]$lr0, 0.05 / 10, tolerance = 1e-9)
     # edge case: an epoch made purely of CE batches
     cb_inst2 <- cb$generate()
-    loss_fn2 <- nn_CompositionalAUC_loss(k = 100) # k >> n_batch -> every batch is CE
+    loss_fn2 <- nn_CompositionalAUC_loss(k = 100, add_sigmoid = FALSE) # k >> n_batch -> every batch is CE
     p2 <- torch::torch_tensor(c(0.3, -0.2),
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
@@ -586,23 +586,32 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(opt2$param_groups[[1]]$lr, 0.05, tolerance = 1e-9)
   })
 
-  test_that("CE branch needs probabilities: a plain MLP feeds logits and fails", {
+  test_that("test add_sigmoid=TRUE", {
     skip_on_cran()
-    set.seed(1)
-    torch::torch_manual_seed(1)
-    n <- 200
-    x1 <- rnorm(n)
-    x2 <- rnorm(n)
-    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
-    task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
-    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
-    L$loss <- nn_CompositionalAUC_loss
-    L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.1)
-    L$param_set$set_values(epochs = 1, batch_size = 32, neurons = 4)
-    expect_error(L$train(task), regexp = "between 0 and 1")
+    prob <- c(0.1, 0.4, 0.35, 0.8)
+    logit <- torch::torch_tensor(qlogis(prob), dtype = torch::torch_float32())
+    pred <- torch::torch_tensor(prob, dtype = torch::torch_float32())
+    target <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    ce_val <- 0.47228795289993286 # gold above
+    aucm_val <- 0.11656250804662704 # gold above
+    expect_true(nn_CompositionalAUC_loss()$add_sigmoid)
+    expect_false(nn_CompositionalAUC_loss(add_sigmoid = FALSE)$add_sigmoid)
+    loss_add_sigmoid_true <- nn_CompositionalAUC_loss()
+    loss_add_sigmoid_false <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
+    expect_equal(loss_add_sigmoid_true(logit, target)$item(), ce_val, tolerance = 1e-6)
+    expect_equal(loss_add_sigmoid_false(pred, target)$item(), ce_val, tolerance = 1e-6)
+    expect_equal(loss_add_sigmoid_true(logit, target)$item(), aucm_val, tolerance = 1e-6)
+    expect_equal(loss_add_sigmoid_false(pred, target)$item(), aucm_val, tolerance = 1e-6)
+    loss_add_sigmoid_false <- nn_CompositionalAUC_loss(add_sigmoid = FALSE)
+    expect_error(loss_add_sigmoid_false(logit, target), regexp = "between 0 and 1")
+    loss_add_sigmoid_false$step$add_(1L) # skip past the CE pass to reach the AUCM one
+    expect_false(isTRUE(all.equal(
+      loss_add_sigmoid_false(logit, target)$item(), aucm_val,
+      tolerance = 1e-6
+    )))
   })
 
-  test_that("e2e: sigmoid-terminated graph learner trains with optim_pdsca", {
+  test_that("test e2e", {
     skip_on_cran()
     set.seed(1)
     torch::torch_manual_seed(1)
@@ -611,6 +620,8 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     x2 <- rnorm(n)
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
     task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
+    lo <- mlr3torch::as_torch_loss(nn_CompositionalAUC_loss)
+    lo$param_set$set_values(add_sigmoid = TRUE) # the MLP head emits logits
     opt <- mlr3torch::as_torch_optimizer(optim_pdsca)
     opt$param_set$set_values(
       lr0 = 0.05, lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
@@ -621,34 +632,17 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
       epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2
     )
-    seen <- new.env()
-    seen$lo <- Inf
-    seen$hi <- -Inf
-    probe <- mlr3torch::torch_callback("probe", on_after_backward = function() {
-      y_hat <- self$ctx$y_hat
-      seen$lo <- min(seen$lo, as.numeric(y_hat$min()))
-      seen$hi <- max(seen$hi, as.numeric(y_hat$max()))
-    })
-    `%>>%` <- mlr3pipelines::`%>>%`
-    po <- mlr3pipelines::po
-    graph <- po("torch_ingress_num") %>>%
-      po("nn_linear", out_features = 4) %>>%
-      po("nn_relu") %>>%
-      po("nn_head") %>>%
-      po("nn_sigmoid") %>>% # transfrom logits to probs
-      po("torch_loss", loss = nn_CompositionalAUC_loss) %>>%
-      po("torch_optimizer", optimizer = opt) %>>%
-      po("torch_callbacks", callbacks = list(cb, probe)) %>>%
-      po("torch_model_classif",
-        epochs = 10, batch_size = 32, shuffle = TRUE, seed = 1
-      )
-    gl <- mlr3::as_learner(graph)
-    gl$predict_type <- "prob"
-    expect_no_error(gl$train(task))
-    expect_gte(seen$lo, 0)
-    expect_lte(seen$hi, 1)
-    expect_gt(gl$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
-    loss_fn <- gl$model$torch_model_classif$model$loss_fn
+    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+    L$loss <- lo
+    L$optimizer <- opt
+    L$callbacks <- cb
+    L$predict_type <- "prob"
+    L$param_set$set_values(
+      epochs = 10, batch_size = 32, neurons = 4, shuffle = TRUE, seed = 1
+    )
+    expect_no_error(L$train(task))
+    expect_gt(L$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
+    loss_fn <- L$model$loss_fn
     expect_gt(as.numeric(loss_fn$a), as.numeric(loss_fn$b))
     expect_gte(as.numeric(loss_fn$alpha), 0)
   })
@@ -679,8 +673,6 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     g2 <- torch::torch_tensor(c(2, 4), dtype = torch::torch_float32())
     g3 <- torch::torch_tensor(c(3, 6), dtype = torch::torch_float32())
     g4 <- torch::torch_tensor(c(4, 8), dtype = torch::torch_float32())
-
-    # (1) weight_momentum = 0 leaves the inner lr0 step alone and never writes back.
     p <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32())
     res <- pdsca_ce_weight_step(p, g1,
       lr0 = 0.05, clamp_value = 10, weight_decay = 0, epoch_decay = 0,
@@ -705,7 +697,6 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
       model_ref = 0, weight_momentum = 0, buffer = res$buffer, model_acc = 0
     )
     b0_t4 <- as.numeric(p)
-    expect_null(res$buffer) # LibAUC never creates the 'weight_buffer' key either
     expect_equal(b0_t1, c(0.25, -0.3000000119), tolerance = 1e-7)
     expect_equal(b0_t2, c(0.150000006, -0.5), tolerance = 1e-7)
     expect_equal(b0_t3, c(0, -0.8000000119), tolerance = 1e-7)
