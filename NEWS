@@ -1,3 +1,10 @@
+Changes in version 2026.8.11
+
+- nn_CompositionalAUC_loss(): R/torch port of LibAUC's CompositionalAUCLoss.
+  Alternates k cross-entropy batches with k AUC-margin batches. Used together
+  with optim_pdsca(PDSCA optimizer for the network weights), and
+  make_pdsca_callback.
+
 Changes in version 2025.9.23 (PR#3)
 
 - mlr3_measures$add(...) in register_mlr3().
