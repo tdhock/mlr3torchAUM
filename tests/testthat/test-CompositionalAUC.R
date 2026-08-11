@@ -510,7 +510,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(as.numeric(after$model_ref), acc_before / 4, tolerance = 1e-6)
     expect_equal(as.numeric(after$model_acc), c(0, 0), tolerance = 1e-9)
     expect_equal(after$T, 0)
-     # won't touch buffers
+    # won't touch buffers
     expect_equal(as.numeric(after$weight_buffer), wb_before, tolerance = 1e-9)
     expect_equal(as.numeric(after$momentum_buffer), mb_before, tolerance = 1e-9)
   })
@@ -652,5 +652,63 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_gt(as.numeric(loss_fn$a), as.numeric(loss_fn$b))
     expect_gte(as.numeric(loss_fn$alpha), 0)
   })
-}
 
+  test_that("test weight_momentum = 0", {
+    skip_on_cran()
+    # Gold:
+    #   uv run --with 'libauc==1.4.0' --with torch --with 'numpy<2' --python 3.11 python test.py
+    # import torch
+    # from libauc.optimizers import PDSCA
+    # from libauc.losses import CompositionalAUCLoss
+    # G = [(1., 2.), (2., 4.), (3., 6.), (4., 8.)]
+    # loss_fn = CompositionalAUCLoss(margin=1.0, device='cpu')
+    # p = torch.nn.Parameter(torch.tensor([0.3, -0.2]))
+    # opt = PDSCA([p], loss_fn=loss_fn, lr=0.1, lr0=0.05, beta1=0.0,
+    #             beta2=0.5, clip_value=10., weight_decay=0.,
+    #             epoch_decay=0., device='cpu')
+    # for t in range(4):
+    #     p.grad = torch.tensor(list(G[t]))
+    #     opt.step()
+    #     print('   ', ' '.join('%.10g' % v for v in p.data.tolist()))
+    # # output:
+    #     # 0.25 -0.3000000119
+    #     # 0.150000006 -0.5
+    #     # 0 -0.8000000119
+    #     # -0.200000003 -1.200000048
+    g1 <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    g2 <- torch::torch_tensor(c(2, 4), dtype = torch::torch_float32())
+    g3 <- torch::torch_tensor(c(3, 6), dtype = torch::torch_float32())
+    g4 <- torch::torch_tensor(c(4, 8), dtype = torch::torch_float32())
+
+    # (1) weight_momentum = 0 leaves the inner lr0 step alone and never writes back.
+    p <- torch::torch_tensor(c(0.3, -0.2), dtype = torch::torch_float32())
+    res <- pdsca_ce_weight_step(p, g1,
+      lr0 = 0.05, clamp_value = 10, weight_decay = 0, epoch_decay = 0,
+      model_ref = 0, weight_momentum = 0, buffer = NULL, model_acc = 0
+    )
+    b0_t1 <- as.numeric(p)
+    expect_null(res$buffer)
+    res <- pdsca_ce_weight_step(p, g2,
+      lr0 = 0.05, clamp_value = 10, weight_decay = 0, epoch_decay = 0,
+      model_ref = 0, weight_momentum = 0, buffer = res$buffer, model_acc = 0
+    )
+    b0_t2 <- as.numeric(p)
+    expect_null(res$buffer)
+    res <- pdsca_ce_weight_step(p, g3,
+      lr0 = 0.05, clamp_value = 10, weight_decay = 0, epoch_decay = 0,
+      model_ref = 0, weight_momentum = 0, buffer = res$buffer, model_acc = 0
+    )
+    b0_t3 <- as.numeric(p)
+    expect_null(res$buffer)
+    res <- pdsca_ce_weight_step(p, g4,
+      lr0 = 0.05, clamp_value = 10, weight_decay = 0, epoch_decay = 0,
+      model_ref = 0, weight_momentum = 0, buffer = res$buffer, model_acc = 0
+    )
+    b0_t4 <- as.numeric(p)
+    expect_null(res$buffer) # LibAUC never creates the 'weight_buffer' key either
+    expect_equal(b0_t1, c(0.25, -0.3000000119), tolerance = 1e-7)
+    expect_equal(b0_t2, c(0.150000006, -0.5), tolerance = 1e-7)
+    expect_equal(b0_t3, c(0, -0.8000000119), tolerance = 1e-7)
+    expect_equal(b0_t4, c(-0.200000003, -1.200000048), tolerance = 1e-7)
+  })
+}

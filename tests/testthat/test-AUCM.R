@@ -402,4 +402,58 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_gt(as.numeric(loss_fn$a), as.numeric(loss_fn$b))
     expect_gte(as.numeric(loss_fn$alpha), 0)
   })
+
+  test_that("momentum = 0 falls back to plain SGD", {
+    skip_on_cran()
+    # Gold:
+    # #  uv run --with 'libauc==1.4.0' --with torch --with 'numpy<2' --python 3.11 python test.py
+    # import torch
+    # from libauc.optimizers import PESG
+    # from libauc.losses import AUCMLoss
+    # G = [(1., 2.), (2., 4.), (3., 6.), (4., 8.)]
+    # loss_fn = AUCMLoss(margin=1.0, device='cpu')
+    # p = torch.nn.Parameter(torch.tensor([1., 2.]))
+    # opt = PESG([p], loss_fn=loss_fn, lr=0.1, momentum=0.0, clip_value=10.,
+    #         weight_decay=0., epoch_decay=0., verbose=False,
+    #         device='cpu')
+    # for t in range(4):
+    #     p.grad = torch.tensor(list(G[t]))
+    #     opt.step()
+    #     st = opt.state[p]
+    #     print('   ', ' '.join('%.10g' % v for v in p.data.tolist()))
+    # # output:
+    #     # 0.8999999762 1.799999952
+    #     # 0.6999999881 1.399999976
+    #     # 0.3999999762 0.7999999523
+    #     # -2.980232239e-08 -5.960464478e-08
+    g1 <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    g2 <- torch::torch_tensor(c(2, 4), dtype = torch::torch_float32())
+    g3 <- torch::torch_tensor(c(3, 6), dtype = torch::torch_float32())
+    g4 <- torch::torch_tensor(c(4, 8), dtype = torch::torch_float32())
+    p <- torch::torch_tensor(c(1, 2), dtype = torch::torch_float32())
+    res <- pesg_primal_step(p, g1,
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, model_ref = 0, momentum = 0, buffer = NULL, model_acc = 0
+    )
+    m0_t1 <- as.numeric(p)
+    res <- pesg_primal_step(p, g2,
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, model_ref = 0, momentum = 0, buffer = res$buffer, model_acc = 0
+    )
+    m0_t2 <- as.numeric(p)
+    res <- pesg_primal_step(p, g3,
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, model_ref = 0, momentum = 0, buffer = res$buffer, model_acc = 0
+    )
+    m0_t3 <- as.numeric(p)
+    res <- pesg_primal_step(p, g4,
+      lr = 0.1, clamp_value = 10, weight_decay = 0,
+      epoch_decay = 0, model_ref = 0, momentum = 0, buffer = res$buffer, model_acc = 0
+    )
+    m0_t4 <- as.numeric(p)
+    expect_equal(m0_t1, c(0.8999999762, 1.799999952), tolerance = 1e-7)
+    expect_equal(m0_t2, c(0.6999999881, 1.399999976), tolerance = 1e-7)
+    expect_equal(m0_t3, c(0.3999999762, 0.7999999523), tolerance = 1e-7)
+    expect_equal(m0_t4, c(-2.980232239e-08, -5.960464478e-08), tolerance = 1e-7)
+  })
 }
