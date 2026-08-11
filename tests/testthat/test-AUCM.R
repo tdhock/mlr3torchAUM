@@ -655,8 +655,13 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     torch_loss$param_set$set_values(margin = 1, version = "v2") # ensure feed the loss probs
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
     L$loss <- torch_loss
-    L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
-    L$callbacks <- make_pesg_callback(lr = 0.05)
+    pesg_args <- list(
+      lr = 0.05, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, momentum = 0.9, decay_factor = 1)
+    torch_opt <- mlr3torch::as_torch_optimizer(optim_pesg)
+    do.call(torch_opt$param_set$set_values, pesg_args)
+    L$optimizer <- torch_opt
+    L$callbacks <- do.call(make_pesg_callback_full, pesg_args)
     L$predict_type <- "prob"
     L$param_set$set_values(epochs = 30, batch_size = 32, neurons = 8, shuffle = FALSE, seed = 1)
     L$train(task)
