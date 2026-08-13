@@ -29,7 +29,7 @@ RandomUnderSampler <- R6::R6Class(
   ),
   private = list(
     .fit_resample = function(X, y) {
-      target_strategy <- check_sampling_strategy_under(y, self$sampling_strategy)
+      target_strategy <- self$sampling_strategy_
 
       indices_by_class <- split(seq_along(y), y)
       
