@@ -1,13 +1,17 @@
 Package: mlr3torchAUM
 Type: Package
 Title: Area Under the Minimum Learning for 'mlr3torch' Framework
-Version: 2026.6.29
+Version: 2026.7.7
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
      email="toby.hocking@r-project.org",
      role=c("aut", "cre"),
-     comment = c(ORCID="0000-0002-3146-0865"))
+     comment = c(ORCID="0000-0002-3146-0865")),
+    person("Wei", "Cao",
+     email="wcao23@ubishops.ca",
+     role="aut",
+     comment = c(ORCID="0009-0005-0325-350X"))
   )
 Description: Learning with loss functions based on
  Area Under the Minimum of False Positives and False Negatives
@@ -19,11 +23,13 @@ BugReports: https://github.com/mlr3-imbalanced/mlr3torchAUM/issues
 Imports:
     data.table,
     torch, coro, R6,
-    mlr3, mlr3misc, lgr, ggplot2
+    mlr3, mlr3misc, lgr, ggplot2,
+    RANN, stats
 Suggests:
     testthat,
     knitr, markdown,
     mlr3torch,
     future, future.apply,
-    litedown
+    litedown,
+    e1071
 VignetteBuilder: knitr

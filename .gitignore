@@ -14,3 +14,7 @@ site/*html
 .Rhistory
 .RData
 .DS_Store
+
+/docs/
+/notebooks/
+/python_golden/
