@@ -1,6 +1,8 @@
 Changes in version 2026.7.7
-
 - SMOTENC over-sampler for mixed nominal (categorical) and continuous features ported from Python imbalanced-learn. Continuous features are interpolated as in SMOTE and each categorical feature takes the neighbours' mode as in SMOTEN; neighbours use a distance combining the continuous Euclidean distance with a median-standard-deviation penalty for every mismatching categorical feature. Inherits SMOTE.
+
+Changes in version 2026.7.4
+- SVMSMOTE over-sampler ported from Python imbalanced-learn: trains an SVM (using e1071), based on the minority-class support vectors, discards the noise ones (all neighors are majority) and splits the rest into danger (most but not all neighbors are major, interpolated) and safe (most or all neighbors are minority, extrapolated). Inherit BaseSMOTE.
 
 Changes in version 2026.7.1
 
