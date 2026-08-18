@@ -2,7 +2,7 @@ torch_loss_weighted_logistic <- function(cost_matrix = NULL) {
   generator <- function(task, ...) {
     if (!("twoclass" %in% task$properties)) {
       stop(sprintf(
-        "Weighted logistic loss is only defined for binary classification tasks, but received task '%s'.",
+        "Weighted logistic loss is currently only implemented for binary classification tasks, but received task '%s'.",
         task$id
       ))
     }
