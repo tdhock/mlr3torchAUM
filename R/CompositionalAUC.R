@@ -26,3 +26,14 @@ nn_CompositionalAUC_loss <- torch::nn_module(
     return(loss)
   }
 )
+
+torch_loss_compositional_auc <- function() {
+  mlr3torch::TorchLoss$new(
+    torch_loss = nn_CompositionalAUC_loss,
+    task_types = "classif",
+    id         = "compositional_auc",
+    label      = "LibAUC compositional CE/AUCM alternating loss",
+    packages   = "mlr3torchAUM",
+    man        = "mlr3torchAUM::nn_CompositionalAUC_loss"
+  )
+}
