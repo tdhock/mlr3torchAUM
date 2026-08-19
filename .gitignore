@@ -18,8 +18,7 @@ site/*html
 /docs/
 /notebooks/
 /python_golden/
-
 *.ipynb
-
 refs/
+slides/
 

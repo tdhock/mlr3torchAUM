@@ -144,4 +144,39 @@ test_that("classif.mcp measure (registered) matches mcp_score", {
   expect_equal(unname(p$score(mlr3::msr("classif.mcp"))), 0.504044, tolerance = 1e-5)
 })
 
+test_that("nn_IMCP_loss remains on computational graph", {
+  skip_on_cran()
+  pred_tensor <- torch::torch_tensor(rbind(
+    c(68, 23, 56),
+    c(3, 50, 38),
+    c(2, 16, 25),
+    c(10, 4, 4)
+  ), requires_grad=TRUE, 
+  dtype = torch::torch_float32())
+  label_tensor <- torch::torch_tensor(c(1L,2L,3L,1L),
+  dtype = torch::torch_long())
+  loss_fn <- nn_IMCP_loss()
+  loss <- loss_fn(pred_tensor, label_tensor)
+  expect_equal(loss$requires_grad, TRUE)
+  loss$backward()
+  expect_false(is.null(pred_tensor$grad))
+  expect_true(all(is.finite(as.numeric(pred_tensor$grad))))
+}) 
 }
+
+test_that("nn_IMCP_loss faces confident prediction", {
+  skip_on_cran()
+  pred_tensor <- torch::torch_tensor(rbind(
+    c(6, 2, 256),
+    c(3, 5, 338),
+    c(2, 160, 2),
+    c(10, 4, 4)
+  ), requires_grad=TRUE, 
+  dtype = torch::torch_float32())
+  label_tensor <- torch::torch_tensor(c(3L,3L,2L,1L),
+  dtype = torch::torch_long())
+  loss_fn <- nn_IMCP_loss()
+  loss <- loss_fn(pred_tensor, label_tensor)
+  loss$backward()
+  expect_true(any(is.finite(as.numeric(pred_tensor$grad))))
+}) 

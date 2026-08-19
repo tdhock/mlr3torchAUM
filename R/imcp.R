@@ -1,3 +1,12 @@
+safe_sqrt <- function(x) {
+  x_safe <- torch::torch_where(x > 0, x, torch::torch_ones_like(x))
+  return(torch::torch_sqrt(x_safe) * torch::torch_where(
+    x > 0,
+    torch::torch_ones_like(x),
+    torch::torch_zeros_like(x)
+  ))
+}
+
 trapz <- function(x_tensor, y_tensor) {
   length_y <- y_tensor$size(1)
   sum((y_tensor[2:length_y] + y_tensor[1:(length_y - 1)]) *
@@ -7,14 +16,19 @@ trapz <- function(x_tensor, y_tensor) {
 get_y_values <- function(
   pred_tensor, y_true_one_hot_tensor, label_tensor
 ) {
-  hellinger_distance <- torch::torch_sqrt(
-    ((y_true_one_hot_tensor - torch::torch_sqrt(pred_tensor))^2)$sum(2)
-  ) / sqrt(2)
-  curve_y <- 1 - hellinger_distance
+  device <- pred_tensor$device
+  d.type <- pred_tensor$dtype
+  hellinger_distance <- safe_sqrt(
+    ((y_true_one_hot_tensor - safe_sqrt(pred_tensor))^2)$sum(2)
+  ) / sqrt(torch::torch_tensor(2, device = device, dtype = d.type))
+  curve_y <- torch::torch_tensor(
+    1,
+    device = device, dtype = d.type
+  ) - hellinger_distance
   ord <- order(
-    torch::as_array(curve_y),
+    torch::as_array(curve_y$detach()),
     torch::as_array(label_tensor)
-  ) # TODO(wei) research on
+  ) # TODO(wei) research on sort on computational graph
   return(list(curve_y = curve_y[ord], sort_indices = ord))
 }
 
@@ -22,7 +36,7 @@ prepare_curve <- function(pred_tensor, label_tensor, abs_tolerance = 1e-6) {
   n_samples <- pred_tensor$size(1)
   n_classes <- pred_tensor$size(2)
   if (n_samples != label_tensor$size(1)) stop("sample numbers don't match")
-  if (any(abs(torch::as_array(pred_tensor$sum(dim = 2) - 1)) > abs_tolerance)) {
+  if (any(abs(torch::as_array(pred_tensor$detach()$sum(dim = 2) - 1)) > abs_tolerance)) {
     stop("Not all rows' probabilities sum to 1")
   }
   y_true_one_hot_tensor <- torch::nnf_one_hot(label_tensor, num_classes = n_classes)
@@ -108,6 +122,20 @@ MeasureClassifIMCP <- R6Class(
       torch::as_array(imcp_score(pred_tensor, label_tensor))
     }
   )
+)
+
+nn_IMCP_loss <- torch::nn_module(
+  c("nn_IMCP_loss", "nn_loss"),
+  forward = function(pred_tensor, label_tensor) {
+    1 - imcp_score(torch::nnf_softmax(pred_tensor, dim = 2), label_tensor)
+  }
+)
+
+nn_MCP_loss <- torch::nn_module(
+  c("nn_MCP_loss", "nn_loss"),
+  forward = function(pred_tensor, label_tensor) {
+    1 - mcp_score(torch::nnf_softmax(pred_tensor, dim = 2), label_tensor)
+  }
 )
 
 MeasureClassifMCP <- R6Class(
