@@ -19,10 +19,14 @@ pesg_primal_step <- function(p, grad,
                              epoch_decay, model_ref, momentum, buffer, model_acc) {
   torch::with_no_grad({
     dp <- pesg_d_p(grad, p, clamp_value, weight_decay, epoch_decay, model_ref)
-    if (is.null(buffer)) {
-      buffer_new <- dp$clone()
+    if (momentum != 0) {
+      if (is.null(buffer)) {
+        buffer_new <- dp$clone()
+      } else {
+        buffer_new <- pesg_buffer_momentum(dp, buffer, momentum)
+      }
     } else {
-      buffer_new <- pesg_buffer_momentum(dp, buffer, momentum)
+      buffer_new <- dp # degenerate to naive SGD
     }
     p$sub_(lr * buffer_new)
     res <- list(buffer = buffer_new, model_acc = model_acc + p)
