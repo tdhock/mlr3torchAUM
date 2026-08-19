@@ -52,7 +52,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
   })
   test_that("Step6: nn_AUCM_loss exposes a/b/alpha as trainable parameters", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss()
+    loss_fn <- nn_AUCM_loss(add_sigmoid = FALSE)
     # a/b/alpha are parameters, with initial value of 0
     expect_equal(loss_fn$a$item(), 0, tolerance = 1e-6)
     expect_equal(loss_fn$b$item(), 0, tolerance = 1e-6)
@@ -66,7 +66,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step7: gradients flow; alpha's grad sign exposes the min-max", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss() # a=b=alpha=0, margin=1
+    loss_fn <- nn_AUCM_loss(add_sigmoid = FALSE) # a=b=alpha=0, margin=1
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     loss <- loss_fn(pred, label)
@@ -84,7 +84,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step9: pesg_alpha_step ascends alpha toward (margin+b-a), clamps >= 0", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss(margin = 1)
+    loss_fn <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)
     torch::with_no_grad({
       # target = margin - (0.575-0.25) = 0.675
       loss_fn$a$fill_(0.575)
@@ -98,7 +98,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     for (i in 1:200) pesg_alpha_step(loss_fn, lr = 0.1)
     expect_equal(loss_fn$alpha$item(), 0.675, tolerance = 1e-4)
     # when target is negative, clamp to 0，no penalties
-    loss_fn2 <- nn_AUCM_loss(margin = 0.1)
+    loss_fn2 <- nn_AUCM_loss(margin = 0.1, add_sigmoid = FALSE)
     torch::with_no_grad({
       # target = margin - (1-0) = -0.9
       loss_fn2$a$fill_(1)
@@ -111,7 +111,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step10: pesg_step descends a/b, ascends alpha, zeros grads", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss(margin = 1) # a=b=alpha=0
+    loss_fn <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE) # a=b=alpha=0
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     loss <- loss_fn(pred, label)
@@ -136,7 +136,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
     task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
-    L$loss <- nn_AUCM_loss
+    tl <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    tl$param_set$set_values(add_sigmoid = FALSE)
+    L$loss <- tl
     L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
     L$callbacks <- make_pesg_callback(lr = 0.05)
     L$predict_type <- "prob"
@@ -181,7 +183,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step14: pesg_step/callback mode='adam' uses Adam for a/b (Route A+)", {
     skip_on_cran()
-    lf <- nn_AUCM_loss(margin = 1)
+    lf <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
     label <- torch::torch_tensor(c(0, 0, 1, 1))
     lf(pred, label)$backward()
@@ -200,7 +202,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
     task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
-    L$loss <- nn_AUCM_loss
+    tl <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    tl$param_set$set_values(add_sigmoid = FALSE)
+    L$loss <- tl
     L$optimizer <- mlr3torch::t_opt("sgd", lr = 0.05)
     L$callbacks <- make_pesg_callback(lr = 0.05, mode = "adam")
     L$predict_type <- "prob"
@@ -340,7 +344,7 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
 
   test_that("Step 23: pesg full step for loss parameters", {
     skip_on_cran()
-    loss_fn <- nn_AUCM_loss(margin = 1)
+    loss_fn <- nn_AUCM_loss(margin = 1, add_sigmoid=FALSE)
     pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8),
       dtype = torch::torch_float32(), requires_grad = TRUE
     )
@@ -383,7 +387,9 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.6, "pos", "neg"), levels = c("pos", "neg"))
     task <- mlr3::TaskClassif$new("t", data.frame(x1, x2, y), target = "y", positive = "pos")
     L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
-    L$loss <- nn_AUCM_loss
+    tl <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    tl$param_set$set_values(add_sigmoid = FALSE)
+    L$loss <- tl
     opt <- mlr3torch::as_torch_optimizer(optim_pesg)
     opt$param_set$set_values(
       lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
@@ -455,5 +461,293 @@ if (torch::torch_is_installed() && requireNamespace("mlr3torch")) {
     expect_equal(m0_t2, c(0.6999999881, 1.399999976), tolerance = 1e-7)
     expect_equal(m0_t3, c(0.3999999762, 0.7999999523), tolerance = 1e-7)
     expect_equal(m0_t4, c(-2.980232239e-08, -5.960464478e-08), tolerance = 1e-7)
+  })
+
+  test_that("test class_mean", {
+    skip_on_cran()
+    x_with_zero <- torch::torch_tensor(c(2, 0, 4), dtype = torch::torch_float32())
+    mask_first_two <- torch::torch_tensor(c(1, 1, 0), dtype = torch::torch_float32())
+    expect_equal(as.numeric(class_mean(x_with_zero, mask_first_two)), 1, tolerance = 1e-6)
+    x_all_selected <- torch::torch_tensor(c(0.5, 1.5), dtype = torch::torch_float32())
+    mask_all <- torch::torch_tensor(c(1, 1), dtype = torch::torch_float32())
+    expect_equal(as.numeric(class_mean(x_all_selected, mask_all)), 1, tolerance = 1e-6)
+    x_unused <- torch::torch_tensor(c(9, 9), dtype = torch::torch_float32())
+    mask_empty <- torch::torch_tensor(c(0, 0), dtype = torch::torch_float32())
+    expect_true(is.nan(as.numeric(class_mean(x_unused, mask_empty)))) # divided by 0
+    x_four <- torch::torch_tensor(c(1, 2, 3, 4), dtype = torch::torch_float32())
+    mask_last_two <- torch::torch_tensor(c(0, 0, 1, 1), dtype = torch::torch_float32())
+    expect_equal(as.numeric(class_mean(x_four, mask_last_two)), 3.5, tolerance = 1e-6)
+  })
+
+  test_that("test AUCM version = 'v2'", {
+    skip_on_cran()
+    # Goldens from LibAUC 2.0.1, via:
+    #   uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 python <script_name>
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   s = torch.tensor([0.1, 0.4, 0.35, 0.8]).view(-1, 1)
+    #   y = torch.tensor([0., 0., 1., 1.]).view(-1, 1)
+    #   def golden(a, b, al, m=1.0, version='v1'):
+    #       f = AUCMLoss(margin=m, version=version)
+    #       with torch.no_grad():
+    #           f.a.fill_(a); f.b.fill_(b); f.alpha.fill_(al)
+    #       out = float(f(s, y))
+    #       return out / (0.5 * 0.5) if version == 'v1' else out
+    #   golden(0, 0, 0)                        # 0.4662500321865082
+    #   golden(0.3, 0.6, 0.5)                  # 0.6962500214576721
+    #   float(AUCMLoss(margin=1.0, version='v1')(s, y))   # 0.11656250804662704
+    #   golden(0.3, 0.6, 0.5, version='v2')    # 0.5712500214576721, wrong, bug!
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, version = "v2")$item(),
+      0.4662500,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 1, version = "v2")$item(),
+      0.6962500,
+      tolerance = 1e-6
+    )
+    expect_equal(AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1)$item(),
+      0.1165625,
+      tolerance = 1e-6
+    )
+  })
+
+  test_that("test v2 equals v1 divided by p*(1-p)", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    for (label_values in list(c(0, 0, 1, 1), c(0, 0, 0, 1), c(0, 1, 1, 1))) {
+      label <- torch::torch_tensor(label_values)
+      p <- as.numeric(positive_ratio(label))
+      for (par in list(c(0, 0, 0, 1), c(0.3, 0.6, 0.5, 1), c(0.2, 0.1, 0.7, 2))) {
+        v1 <- AUCM(pred, label, par[1], par[2], par[3], par[4])$item()
+        v2 <- AUCM(pred, label, par[1], par[2], par[3], par[4], version = "v2")$item()
+        expect_equal(v2, v1 / (p * (1 - p)), tolerance = 1e-6)
+      }
+    }
+  })
+
+  test_that("test v2 does not reproduce the LibAUC cross-term flaw", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    v2 <- AUCM(pred, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 1, version = "v2")$item()
+    expect_false(isTRUE(all.equal(v2, 0.5712500, tolerance = 1e-6)))
+  })
+
+  test_that("test v2 keeps zero-valued samples in the class size", {
+    skip_on_cran()
+    # uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 python
+    #
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   def golden(a, b, al, s_list, y_list, m=1.0, version='v1'):
+    #       s = torch.tensor(s_list).view(-1, 1); y = torch.tensor(y_list).view(-1, 1)
+    #       p = sum(y_list) / len(y_list)
+    #       f = AUCMLoss(margin=m, version=version)
+    #       with torch.no_grad(): f.a.fill_(a); f.b.fill_(b); f.alpha.fill_(al)
+    #       out = float(f(s, y))
+    #       return out / (p * (1 - p)) if version == 'v1' else out
+    #   S0 = [0.0, 0.4, 0.35, 0.8]; Y = [0., 0., 1., 1.]
+    #   golden(0, 0, 0, S0, Y)         # 0.46125003695487976  LibAUC v2: 0.5412500500679016
+    #   golden(0.3, 0.6, 0.5, S0, Y)   # 0.7012500166893005   LibAUC v2: 0.6012499928474426
+    pred_with_zero <- torch::torch_tensor(c(0.0, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      AUCM(pred_with_zero, label, a = 0, b = 0, alpha = 0, margin = 1, version = "v2")$item(),
+      0.4612500,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred_with_zero, label, a = 0.3, b = 0.6, alpha = 0.5, margin = 1, version = "v2")$item(),
+      0.7012500,
+      tolerance = 1e-6
+    )
+  })
+
+  test_that("test v2 stays finite when a whole class sits on its center", {
+    skip_on_cran()
+    #   SAT = [0.0, 0.0, 1.0, 1.0]; Y = [0., 0., 1., 1.]
+    #   golden(1.0, 0.0, 0.5, SAT, Y)  # -0.25                LibAUC v2: nan
+    pred_saturated <- torch::torch_tensor(c(0, 0, 1, 1))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    saturated <- AUCM(pred_saturated, label,
+      a = 1, b = 0, alpha = 0.5, margin = 1, version = "v2"
+    )$item()
+    expect_false(is.nan(saturated))
+    expect_equal(saturated, -0.25, tolerance = 1e-6)
+  })
+
+  test_that("test v2 is NaN for a single-class batch while v1 is finite", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    for (label_values in list(c(0, 0, 0, 0), c(1, 1, 1, 1))) {
+      label <- torch::torch_tensor(label_values)
+      expect_true(is.nan(
+        AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, version = "v2")$item()
+      ))
+      expect_equal(AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1)$item(),
+        0,
+        tolerance = 1e-6
+      )
+    }
+  })
+
+  test_that("test nn_AUCM_loss forwards version to AUCM", {
+    skip_on_cran()
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2", add_sigmoid=FALSE)
+    expect_equal(loss_fn(pred, label)$item(), 0.4662500, tolerance = 1e-6) # gold: see above
+    loss_fn_default <- nn_AUCM_loss(margin = 1, add_sigmoid=FALSE)
+    expect_equal(loss_fn_default(pred, label)$item(), 0.1165625, tolerance = 1e-6) # gold: see above
+  })
+
+  test_that("test v2 gradients of a, b and alpha", {
+    skip_on_cran()
+    # uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 python
+    #
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   def grads(a, b, al, s_list, y_list, m=1.0):
+    #       s = torch.tensor(s_list).view(-1, 1); y = torch.tensor(y_list).view(-1, 1)
+    #       p = sum(y_list) / len(y_list); sc = p * (1 - p)
+    #       f = AUCMLoss(margin=m, version='v1')
+    #       with torch.no_grad(): f.a.fill_(a); f.b.fill_(b); f.alpha.fill_(al)
+    #       L = f(s, y); L.backward()
+    #       return [float(f.a.grad)/sc, float(f.b.grad)/sc, float(f.alpha.grad)/sc]
+    #   S = [0.1, 0.4, 0.35, 0.8]; Y = [0., 0., 1., 1.]
+    #   grads(0, 0, 0, S, Y)        # [-1.149999976158142, -0.5, 1.350000023841858]
+    #   grads(0.3, 0.6, 0.5, S, Y)  # [-0.5499999523162842, 0.7000000476837158, 0.3500000238418579]
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    loss_fn <- nn_AUCM_loss(margin = 1, version = "v2", add_sigmoid=FALSE)
+    loss <- loss_fn(pred, label)
+    expect_true(loss$requires_grad)
+    loss$backward()
+    expect_equal(as.numeric(loss_fn$a$grad), -1.15, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$b$grad), -0.5, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn$alpha$grad), 1.35, tolerance = 1e-6)
+    loss_fn2 <- nn_AUCM_loss(margin = 1, version = "v2", add_sigmoid=FALSE)
+    torch::with_no_grad({
+      loss_fn2$a$fill_(0.3)
+      loss_fn2$b$fill_(0.6)
+      loss_fn2$alpha$fill_(0.5)
+    })
+    loss_fn2(pred, label)$backward()
+    expect_equal(as.numeric(loss_fn2$a$grad), -0.55, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn2$b$grad), 0.7, tolerance = 1e-6)
+    expect_equal(as.numeric(loss_fn2$alpha$grad), 0.35, tolerance = 1e-6)
+  })
+
+  test_that("test v2 e2e", {
+    skip_on_cran()
+    set.seed(1)
+    torch::torch_manual_seed(1)
+    n <- 200
+    x1 <- rnorm(n)
+    x2 <- rnorm(n)
+    y <- factor(ifelse(plogis(1.5 * x1 - x2) > 0.7, "pos", "neg"), levels = c("neg", "pos"))
+    task <- mlr3::TaskClassif$new("toy", data.frame(x1, x2, y), target = "y", positive = "pos")
+    torch_loss <- mlr3torch::as_torch_loss(nn_AUCM_loss)
+    torch_loss$param_set$set_values(margin = 1, version = "v2") # ensure feed the loss probs
+    L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+    L$loss <- torch_loss
+    pesg_args <- list(
+      lr = 0.05, clamp_value = 1, weight_decay = 1e-4,
+      epoch_decay = 1e-3, momentum = 0.9, decay_factor = 1)
+    torch_opt <- mlr3torch::as_torch_optimizer(optim_pesg)
+    do.call(torch_opt$param_set$set_values, pesg_args)
+    L$optimizer <- torch_opt
+    L$callbacks <- do.call(make_pesg_callback_full, pesg_args)
+    L$predict_type <- "prob"
+    L$param_set$set_values(epochs = 30, batch_size = 32, neurons = 8, shuffle = FALSE, seed = 1)
+    L$train(task)
+    expect_equal(L$param_set$values$loss.version, "v2")
+    lf <- L$model$loss_fn
+    a <- as.numeric(lf$a)
+    b <- as.numeric(lf$b)
+    alpha <- as.numeric(lf$alpha)
+    expect_false(any(is.nan(c(a, b, alpha))))
+    expect_gt(a, b)
+    expect_gte(alpha, 0)
+    expect_gt(L$predict(task)$score(mlr3::msr("classif.auc")), 0.8)
+  })
+
+  test_that("test new parameter imratio", {
+    skip_on_cran()
+    #   uv run --with 'libauc==2.0.1' --with torch --with 'numpy<2' --python 3.11 <script.py>
+    #   import torch
+    #   from libauc.losses.auc import AUCMLoss
+    #   s = torch.tensor([0.1, 0.4, 0.35, 0.8]).view(-1, 1)
+    #   y = torch.tensor([0., 0., 1., 1.]).view(-1, 1) # batch p = 0.5
+    #   f = AUCMLoss(margin=1.0, imratio=0.01, version='v1')
+    #   with torch.no_grad():
+    #       f.a.fill_(0.3); f.b.fill_(0.6); f.alpha.fill_(0.5)
+    #   float(f(s, y, auto=False)) # --0.2127312421798706
+    #   AUCMLoss(margin=1.0, imratio=0.01, version='v1')(s, y, auto=False) # 0.18914376199245453
+    #   AUCMLoss(margin=1.0, imratio=0.25, version='v1')(s, y, auto=False) # 0.1535937637090683
+    pred <- torch::torch_tensor(c(0.1, 0.4, 0.35, 0.8))
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, imratio = 0.01)$item(),
+      0.1891438,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred, label, a = 0, b = 0, alpha = 0, margin = 1, imratio = 0.25)$item(),
+      0.1535938,
+      tolerance = 1e-6
+    )
+    expect_equal(
+      AUCM(pred, label,
+        a = 0.3, b = 0.6, alpha = 0.5, margin = 1, imratio = 0.01
+      )$item(),
+      -0.2127312,
+      tolerance = 1e-6
+    )
+  })
+
+  test_that("test new parameter add_sigmoid", {
+    skip_on_cran()
+    prob <- c(0.1, 0.4, 0.35, 0.8)
+    logit <- torch::torch_tensor(qlogis(prob)) # sigmoid(qlogis(p)) == p
+    pred <- torch::torch_tensor(prob)
+    label <- torch::torch_tensor(c(0, 0, 1, 1))
+    expect_equal(
+      nn_AUCM_loss(margin = 1)(logit, label)$item(),
+      AUCM(pred, label, margin = 1)$item(),
+      tolerance = 1e-6
+    )
+    expect_equal(
+      nn_AUCM_loss(margin = 1, version = "v2")(logit, label)$item(),
+      AUCM(pred, label, margin = 1, version = "v2")$item(),
+      tolerance = 1e-6
+    )
+    off <- nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)(logit, label)$item()
+    expect_false(isTRUE(all.equal(off, AUCM(pred, label, margin = 1)$item(),
+      tolerance = 1e-6
+    )))
+    expect_equal(off, AUCM(logit, label, margin = 1)$item(), tolerance = 1e-6)
+    expect_true(nn_AUCM_loss(margin = 1)$add_sigmoid)
+    expect_false(nn_AUCM_loss(margin = 1, add_sigmoid = FALSE)$add_sigmoid)
+    loss_fn <- nn_AUCM_loss(margin = 1) # add_sigmoid = TRUE by default
+    loss <- loss_fn(logit, label) # feed with logits
+    expect_true(loss$requires_grad)
+    loss$backward()
+    grads <- c(
+      as.numeric(loss_fn$a$grad), as.numeric(loss_fn$b$grad),
+      as.numeric(loss_fn$alpha$grad)
+    )
+    expect_false(any(is.nan(grads)))
+    expect_true(all(is.finite(grads)))
+    # Values identical to Step7
+    expect_equal(grads, c(-0.2875, -0.125, 0.3375), tolerance = 1e-6)
+    scores <- torch::torch_tensor(qlogis(prob), requires_grad = TRUE)
+    nn_AUCM_loss(margin = 1)(scores, label)$backward()
+    expect_false(any(is.nan(as.numeric(scores$grad))))
+    expect_equal(length(as.numeric(scores$grad)), length(prob))
   })
 }

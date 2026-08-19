@@ -1,4 +1,10 @@
-Changes in version 2026.8.11
+Changes in version 2026.8.9
+
+- nn_AUCM_loss() and AUCM() gain an imratio argument: the "v1" class prior,
+  fixed instead of re-estimated from every batch. NULL (default) keeps the
+  batch estimate; "v2" ignores it, having no prior.
+
+Changes in version 2026.8.4
 
 - nn_CompositionalAUC_loss(): R/torch port of LibAUC's CompositionalAUCLoss.
   Alternates k cross-entropy batches with k AUC-margin batches. Used together
@@ -8,6 +14,11 @@ Changes in version 2026.8.11
 Changes in version 2026.8.8
 
 - RandomOverSampler implemented for random over-sampling with optional smoothed bootstrap (ROSE method), ported from Python imbalanced-learn reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
+
+Changes in version 2026.8.4
+- nn_AUCM_loss() and AUCM() gain a version argument: "v1" (default, LibAUC's
+  prior-weighted form) and "v2" (class-conditional form, v1 / (p * (1 - p))).
+- "v2" requires both classes in every batch, otherwise the loss is NaN.
 
 Changes in version 2026.7.7
 - SMOTENC over-sampler for mixed nominal (categorical) and continuous features ported from Python imbalanced-learn. Continuous features are interpolated as in SMOTE and each categorical feature takes the neighbours' mode as in SMOTEN; neighbours use a distance combining the continuous Euclidean distance with a median-standard-deviation penalty for every mismatching categorical feature. Inherits SMOTE.
@@ -25,7 +36,6 @@ Changes in version 2026.7.1
 Changes in version 2026.6.29
 
 - nn_pairwise_auc_loss and pairwise_auc_surrogates implemented as a surrogate loss for pairwise AUC optimization, from Python libauc reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
-
 
 Changes in version 2025.9.23 (PR#3)
 
