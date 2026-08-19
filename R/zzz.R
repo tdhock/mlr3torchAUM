@@ -21,4 +21,7 @@ register_mlr3torch = function(...) {
   mlr3misc::register_namespace_callback(pkgname, "mlr3torch", register_mlr3torch)
 }
 
+# 'self' is injected by mlr3torch into callback stage functions (on_after_backward, ...)
+utils::globalVariables("self")
+
 mlr3misc::leanify_package()

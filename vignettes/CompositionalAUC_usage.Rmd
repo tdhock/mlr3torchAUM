@@ -1,0 +1,128 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Compositional AUC usage}
+-->
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  error = FALSE)
+data.table::setDTthreads(1L)
+```
+
+# Maximizing AUC with the Compositional AUC loss
+
+`nn_CompositionalAUC_loss` is ported from LibAUC's `CompositionalAUCLoss`.
+It builds on `nn_AUCM_loss`: instead of optimizing the AUC surrogate directly,
+it optimizes
+
+```
+L_AUC(w - lr0 * grad L_CE(w))
+```
+
+Read that from the inside out.
+The inner part takes one cross-entropy step from the current weights `w`.
+The outer part evaluates the AUC-margin loss **at that moved position**
+of the weights, not at `w`.
+Composing them lets the second one work on top of a model the first one already
+improved, one batch at a time.
+
+In practice the two levels take turns.
+With `k = 1` the schedule is CE, AUCM, CE, AUCM, ...;
+with `k = 2` it is CE, CE, AUCM, AUCM, ....
+The loss module counts its own forward calls and switches accordingly.
+
+## Three pieces that must be used together
+
+The loss carries three trainable parameters that live outside the network:
+`a` (mean of the positive samplers), `b` (mean of the negative samplers) and
+`alpha` (a dual variable that pushes `a` and `b` apart until they are `margin`
+away from each other).
+`mlr3torch`'s optimizer only sees the network parameters, so `a`, `b` and
+`alpha` would never be trained by it.
+That is why three things are needed at once:
+
+| piece | trains |
+|---|---|
+| `nn_CompositionalAUC_loss` | holds `a`, `b`, `alpha` and the pass counter |
+| `optim_pdsca` | the network weights, differently on each pass |
+| `make_pdsca_callback` | `a`, `b`, `alpha`, and the per-epoch bookkeeping |
+
+## Feed logits
+
+Both passes need scores in `[0, 1]`.
+By default `add_sigmoid = TRUE`, so the loss apply a sigmoid to
+whatever the network emits before doing anything else,
+and is suited for a normal `LearnerTorchMLP` whose head emits logits.
+
+If your network already ends in a sigmoid, pass `add_sigmoid = FALSE`.
+
+## Two learning rates, and a momentum convention that is backwards
+
+`lr0` belongs to the inner cross-entropy step and `lr` to the outer AUC step;
+they decay independently by `decay_factor0` and `decay_factor`.
+
+The two momentum arguments are **not** PyTorch momentum:
+
+```
+buf <- (1 - beta) * buf + beta * new
+```
+
+`beta` is the weight on the *new* value, so a larger `beta` means *less*
+smoothing, which is the opposite of what `optim_sgd(momentum=)` does.
+`weight_momentum` averages the *weights* on cross-entropy batches,
+while `momentum` averages the *gradients* on AUCM batches.
+
+## An imbalanced version of the spam data set
+
+```{r}
+spam_task <- mlr3::tsk("spam")
+spam_task$filter(1504:4293) # for imbalance:  310 vs 2480
+Class_vec <- spam_task$data(spam_task$row_ids, "type")$type
+(count_tab <- table(Class_vec))
+print(count_tab / sum(count_tab))
+library(data.table)
+orig_X_dt <- spam_task$data(spam_task$row_ids, spam_task$col_roles$feature)
+sc_X_dt <- data.table(type = Class_vec, scale(orig_X_dt))
+spam_sc_task <- mlr3::TaskClassif$new("spam_sc", sc_X_dt, target = "type")
+spam_sc_task$col_roles$stratum <- "type"
+```
+
+## Training
+
+```{r}
+torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
+if(torch_available){
+  hyper_params <- list(
+    lr = 0.1, clamp_value = 1, weight_decay = 1e-4,
+    epoch_decay = 1e-3, momentum = 0.9, decay_factor = 2)
+  L <- mlr3torch::LearnerTorchMLP$new(task_type = "classif")
+  L$loss <- mlr3torchAUM::nn_CompositionalAUC_loss
+  opt <- mlr3torch::as_torch_optimizer(mlr3torchAUM::optim_pdsca)
+  opt$param_set$set_values(
+    lr0 = 0.05, lr = hyper_params$lr, clamp_value = hyper_params$clamp_value,
+    weight_decay = hyper_params$weight_decay, epoch_decay = hyper_params$epoch_decay,
+    weight_momentum = 0.9, momentum = hyper_params$momentum,
+    decay_factor0 = 2, decay_factor = hyper_params$decay_factor)
+  L$optimizer <- opt
+  # the same hyperparameters again, this time for a, b and alpha
+  L$callbacks <- do.call(mlr3torchAUM::make_pdsca_callback, hyper_params)
+  L$predict_type <- "prob"
+  L$param_set$set_values(
+    epochs = 10, batch_size = 32, neurons = 8, shuffle = TRUE, seed = 1)
+  set.seed(1)
+  L$train(spam_sc_task)
+  loss_fn <- L$model$loss_fn
+  cat("a =", as.numeric(loss_fn$a), "\n")
+  cat("b =", as.numeric(loss_fn$b), "\n")
+  cat("alpha =", as.numeric(loss_fn$alpha), "\n")
+  print(L$predict(spam_sc_task)$score(mlr3::msr("classif.auc")))
+}
+```
+
+`a > b` is the sign that the loss parameters have separated the two classes the
+way they should: positive scores concentrate above negative ones.
+`alpha` is clamped at `0` from below, so a positive value means the margin has
+not been reached yet and the dual variable is still pushing.
+
