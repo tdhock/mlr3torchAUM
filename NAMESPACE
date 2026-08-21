@@ -10,7 +10,7 @@ export(mcp_curve, mcp_score, imcp_curve, imcp_score, MeasureClassifIMCP, Measure
 importFrom(data.table, data.table)
 importFrom(mlr3, MeasureClassif, msr)
 importFrom(R6, R6Class)
-importFrom(stats, runif, setNames, rbeta, median, dist)
+importFrom(stats, runif, setNames, rbeta, median, dist, rnorm)
 importFrom(ggplot2, aes)
 importFrom(ggplot2, geom_line)
 importFrom(ggplot2, ggplot)
