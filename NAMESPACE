@@ -1,4 +1,5 @@
-export(batch_sampler_stratified, batch_sampler_random, MeasureClassifROCAUM, MeasureClassifInvAUC, nn_ROCAUM_loss, ROCAUM, nn_squared_hinge_loss, SquaredHingeLoss)
+export(batch_sampler_stratified, batch_sampler_random, MeasureClassifROCAUM, MeasureClassifInvAUC, nn_ROCAUM_loss, ROCAUM)
+export(nn_squared_hinge_loss, SquaredHingeLoss)
 export(Draw_ROC_curve_macro,Draw_ROC_curve_micro,ROC_AUC_macro,ROC_AUC_micro,ROC_AUM_macro,ROC_AUM_micro)
 export(nn_pairwise_auc_loss, pairwise_auc_surrogates)
 export(SMOTE, SVMSMOTE, SMOTENC, SMOTEN)
