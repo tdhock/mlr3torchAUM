@@ -11,6 +11,10 @@ register_mlr3torch = function(...) {
   mlr3torch::mlr3torch_losses$add("pairwise_auc_surrogate", torch_loss_pairwise_auc_surrogate)
 }
 
+register_mlr3torch = function(...) {
+    mlr3torch::mlr3torch_losses$add("sq_hinge_loglinear", torch_loss_sq_hinge_loglinear)
+}
+
 .onLoad = function(libname, pkgname) { # nolint
   # Configure Logger:
   assign("lg", lgr::get_logger("mlr3"), envir = parent.env(environment()))

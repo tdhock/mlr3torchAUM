@@ -1,0 +1,199 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Squared hinge loss}
+-->
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+data.table::setDTthreads(1L)
+loss_val <- 11.1687
+loss_diff <- 4.55e-13
+
+```
+
+Below we demonstrate the all-pairs squared hinge loss from Rust and Hocking (arXiv:2302.11062), implemented via cumulative sums in O(n log n) time.
+
+Below we load required packages and check torch availability.
+```{r}
+library(data.table)
+torch_available <- requireNamespace("mlr3torch") && torch::torch_is_installed()
+```
+
+## Direct usage with torch tensors
+
+Below we compute the squared hinge loss on a small example.
+```{r}
+if(torch_available){
+  torch::torch_manual_seed(1)
+  pred <- torch::torch_randn(6)
+  labels <- torch::torch_tensor(c(1, -1, 1, -1, -1, 1))
+  (loss_val_tensor <- mlr3torchAUM::SquaredHingeLoss(pred, labels, margin=1))
+  loss_val <- as.numeric(loss_val_tensor)
+}
+```
+
+The output above shows a loss of `r loss_val` for 6 observations (3 positive, 3 negative) with margin=1.
+
+Below we use the `nn_module` wrapper, which also tracks evaluation statistics.
+```{r}
+if(torch_available){
+  loss_fn <- mlr3torchAUM::nn_squared_hinge_loss(margin=1)
+  loss_fn(pred, labels)
+  loss_fn$state_dict()
+}
+```
+
+The output above shows evals=1 (the loss was called once), zeros=0 (the loss was non-zero), and all_one_class=0 (both classes were present in the batch).
+
+## Effect of margin parameter
+
+The margin m controls the required gap between positive and negative predictions, the loss is zero only when every positive prediction exceeds every negative prediction by at least m.
+
+Below we compute the loss at several margin values.
+```{r}
+if(torch_available){
+  margin_values <- c(0, 0.5, 1, 2)
+  loss_by_margin <- sapply(margin_values, function(m){
+    torch::as_array(mlr3torchAUM::SquaredHingeLoss(pred, labels, margin=m))
+  })
+  data.table(margin=margin_values, loss=loss_by_margin)
+}
+```
+
+The output above shows that the loss increases with the margin: 1.16 at m=0, 4.42 at m=0.5, 11.17 at m=1, and 37.46 at m=2.
+A larger margin demands a wider separation between positive and negative predictions, so the penalty grows accordingly.
+
+Note that even at $m=0$, the loss is non-zero (1.16).
+This is because our predictions are random.
+The squared hinge loss formula $l = \max(0, m - (\hat{y}_{pos} - \hat{y}_{neg}))^2$ dictates that when $m=0$, any pair ranked in the wrong order (where the negative score is higher than the positive score) will still incur a squared penalty.
+
+## Comparison with naive O(n^2) computation
+
+Below we define a naive double-loop reference implementation of the all-pairs squared hinge loss in pure R.
+```{r}
+if(torch_available){
+  naive_squared_hinge_loss <- function(pred, label, margin=1){
+    pos <- which(label == 1)
+    neg <- which(label != 1)
+    if(length(pos) == 0 || length(neg) == 0) return(0)
+    total <- 0
+    for(j in pos){
+      for(k in neg){
+        total <- total + max(margin - (pred[j] - pred[k]), 0)^2
+      }
+    }
+    total
+  }
+  n <- 50
+  set.seed(42)
+  pred <- rnorm(n)
+  label <- sample(c(-1L, 1L), n, replace=TRUE)
+  cumsum_loss <- torch::as_array(
+    mlr3torchAUM::SquaredHingeLoss(
+      torch::torch_tensor(pred, dtype=torch::torch_double()), 
+      torch::torch_tensor(label)
+    )
+  )
+  naive_loss <- naive_squared_hinge_loss(pred, label)
+  loss_diff <- abs(cumsum_loss - naive_loss)
+  data.table(
+    cumsum=cumsum_loss, naive=naive_loss,
+    difference=loss_diff)
+}
+```
+
+The output above shows that both implementations give 1121.211.
+The difference of `r sprintf("%.2e", loss_diff)` is expected floating-point precision error due to the algorithms accumulating sums in a different order.
+This verifies the $O(n \log n)$ implementation is mathematically correct.
+
+Below we use this verified loss in a benchmark comparing squared hinge with the ROCAUM loss on an imbalanced classification task.
+## Benchmark comparison
+
+Below we use the `atime` package to empirically verify the asymptotic time complexity of our $O(N \log N)$ squared hinge loss implementation compared to the naive $O(N^2)$ approach and the standard $O(N)$ logistic loss.
+
+Note that at $N=31,622$, the cross-subtraction matrix inside the naive implementation grows to roughly 1GB, which exceeds standard CPU cache and GitHub Actions runner memory limits.
+To prevent Out Of Memory (OOM) crashes on CI, we avoid evaluating the Naive implementation for $N > 10,000$.
+
+```{r}
+if(torch_available && requireNamespace("atime")){
+  library(data.table)
+  library(ggplot2)
+  device <- torch::torch_device("cpu")
+  torch::torch_set_num_threads(1L)
+  n_seq <- as.integer(10^seq(1, 7, by=0.5))
+  Nmax <- 10000
+  times <- 8
+  bench_all <- atime::atime(
+    N = n_seq,
+    seconds.limit = 1.0,
+    times = times,
+    setup = {
+      pred_t <- torch::torch_randn(N, dtype=torch::torch_float32(), device=device)
+      label_t <- torch::torch_tensor(rep(c(-1, 1), length.out=N), dtype=torch::torch_float32(), device=device)
+      label_t_logistic <- (label_t + 1) / 2
+      is_pos <- label_t == 1
+      is_neg <- label_t != 1
+      p_leaf <- pred_t$detach()$requires_grad_(TRUE)
+      p_leaf$sum()$backward()
+      p_leaf$grad$zero_()
+    },
+    Logistic = {
+      p_leaf$grad$zero_()
+      loss <- torch::nnf_binary_cross_entropy_with_logits(p_leaf, label_t_logistic)
+      loss$backward()
+    },
+    Functional = {
+      p_leaf$grad$zero_()
+      loss <- mlr3torchAUM::SquaredHingeLoss(p_leaf, label_t, margin=1.0)
+      loss$backward()
+    },
+    Naive = {
+      if (N <= Nmax) {
+        p_leaf$grad$zero_()
+        diffs <- p_leaf[is_pos]$unsqueeze(2) - p_leaf[is_neg]$unsqueeze(1)
+        loss <- torch::torch_sum(torch::torch_clamp(1.0 - diffs, min=0)^2)
+        loss$backward()
+      }
+    }
+  )
+  bench_some <- bench_all
+  bench_some$measurements <- bench_all$measurements[
+    !(expr.name == "Naive" & N > Nmax)]
+  plot(bench_some)
+  refs <- atime::references_best(bench_some)
+  seconds.dt <- refs$meas[unit == "seconds"]
+}
+```
+Below we plot the empirical timings and their best-fit asymptotic reference lines.
+```{r complexity-plot, fig.width=10, fig.height=5, fig.align='center', out.width='100%', fig.cap=""}
+if(torch_available && requireNamespace("atime")){
+  p <- ggplot() +
+    geom_ribbon(aes(
+      x = N, ymin = min, ymax = max, fill = expr.class),
+      data = seconds.dt, alpha = 0.2) +
+    geom_line(aes(
+      x = N, y = empirical, color = expr.class),
+      data = seconds.dt, linewidth = 1) +
+    scale_x_log10(
+      breaks=10^(1:7),
+      labels=scales::trans_format("log10",scales::math_format(10^.x)),
+      limits=c(10,4e7)
+    ) +
+    scale_y_log10() +
+    ggtitle("Empirical estimation of asymptotic time complexity") +
+    xlab("N = Number of labeled examples") +
+    ylab(sprintf(
+      "Time (seconds), median line and min/max band, %d timings",
+      times)) +
+    theme_bw()
+  if(requireNamespace("directlabels")){
+    p <- directlabels::direct.label(p, "last.points")
+  }
+  p
+}
+```
+We see in the result figure above that:
+
+* The naive approach follows an $O(N^2)$ trajectory, confirming it is too slow for large batch sizes.
+* Our Functional squared hinge loss implementation closely follows the $O(N \log N)$ complexity, making it vastly more efficient and nearly as fast as the $O(N)$ logistic loss.

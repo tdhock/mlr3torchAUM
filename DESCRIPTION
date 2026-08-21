@@ -1,7 +1,7 @@
 Package: mlr3torchAUM
 Type: Package
 Title: Area Under the Minimum Learning for 'mlr3torch' Framework
-Version: 2026.8.11
+Version: 2026.8.21
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -29,7 +29,10 @@ Suggests:
     testthat,
     knitr, markdown,
     mlr3torch,
+    scales,
+    atime,
     future, future.apply,
     litedown,
-    e1071
+    e1071,
+    directlabels
 VignetteBuilder: knitr
