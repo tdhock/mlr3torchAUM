@@ -6,7 +6,7 @@ A \code{torch} optimizer porting LibAUC's PDSCA (Primal-Dual Stochastic
 Compositional Adaptive) algorithm for the network weights, used with
 \code{\link{nn_CompositionalAUC_loss}} and \code{\link{make_pdsca_callback}}.
 Apply gradient clamping, weight decay and an epoch-wise proximal
-term to each step in \code{\link{nn_CompositionalAUC_loss}. 
+term to each step in \code{\link{nn_CompositionalAUC_loss}}.
 The optimizer also exposes \code{update_regularizer()} (set the proximal
 reference to the epoch average) and \code{update_lr()} (decay both learning
 rates), called once per epoch by \code{\link{make_pdsca_callback}}.

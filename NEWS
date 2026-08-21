@@ -1,3 +1,7 @@
+Changes in version 2026.8.21 (PR#56)
+
+- SquaredHingeLoss and nn_squared_hinge_loss implemented via cumulative sums in O(n log n) time as a convex surrogate for AUC, from Rust and Hocking (arXiv:2302.11062). Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
+
 Changes in version 2026.8.9
 
 - nn_AUCM_loss() and AUCM() gain an imratio argument: the "v1" class prior,
