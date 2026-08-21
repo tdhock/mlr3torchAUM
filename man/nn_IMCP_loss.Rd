@@ -15,13 +15,17 @@
 nn_IMCP_loss()
 nn_MCP_loss()
 }
-\arguments{
-  \item{pred_tensor}{Argument of the modules' \code{forward()} method: a
-    \code{torch} tensor of raw scores (logits) of shape
-    \code{(n_samples, n_classes)}.}
-  \item{label_tensor}{Argument of the modules' \code{forward()} method: a
-    \code{torch} long tensor of 1-based true class labels (values \code{1}
-    to \code{n_classes}), of length \code{n_samples}.}
+\section{Forward arguments}{
+  Neither constructor takes arguments. The returned module is called as
+  \code{module(pred_tensor, label_tensor)}, with:
+  \describe{
+    \item{\code{pred_tensor}}{A \code{torch} tensor of raw scores (logits)
+      of shape \code{(n_samples, n_classes)}. A softmax over the class
+      dimension is applied internally.}
+    \item{\code{label_tensor}}{A \code{torch} long tensor of 1-based true
+      class labels (values \code{1} to \code{n_classes}), of length
+      \code{n_samples}.}
+  }
 }
 \value{
   A \code{torch} loss module generator. Suitable for use as the
