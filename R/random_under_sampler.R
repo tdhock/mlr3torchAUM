@@ -1,19 +1,3 @@
-check_sampling_strategy_under <- function(y, strategy = "auto") {
-  count <- count_class(y)
-  min_value <- min(count)
-
-  if (strategy == "auto") {
-    maj_counts <- count[count > min_value]
-    target_counts <- setNames(rep.int(min_value, length(maj_counts)), names(maj_counts))
-    return(target_counts)
-  }
-  if (strategy == "all") {
-    target_counts <- setNames(rep.int(min_value, length(count)), names(count))
-    return(target_counts)
-  }
-  stop(sprintf("strategy %s not implemented for under-sampling", strategy))
-}
-
 RandomUnderSampler <- R6::R6Class(
   "RandomUnderSampler",
   inherit = BaseUnderSampler,
