@@ -5,8 +5,8 @@
 
 
 AUC/AUM-based losses, optimizers, batch samplers, over-samplers, and multiclass
-`
 performance measures for imbalanced classification in the mlr3torch framework.
+
 ## Installation
 
 ```r
@@ -106,3 +106,8 @@ The following features were implemented by [@weicaocw](https://github.com/weicao
 - **Package infrastructure** (PR #37, #38, #39, #42): documentation website
   (litedown + Netlify), CI cache fixes, CRAN-compliance cleanup, and README/branch tidy-up
   in the test coverage workflow.
+
+## Future plan
+### @weicaocw
+- Comprehensive benchmarking on *MNIST datasets, Laribi2024, and HIGGS.
+- Resolve known performance issues listed on the [issues page](https://github.com/mlr3-imbalanced/mlr3torchAUM/issues).
