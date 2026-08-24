@@ -8,6 +8,7 @@ export(AUCM, nn_AUCM_loss, make_pesg_callback, optim_pesg, make_pesg_callback_fu
 export(nn_CompositionalAUC_loss, optim_pdsca, make_pdsca_callback)
 export(batch_sampler_dual)
 export(mcp_curve, mcp_score, imcp_curve, imcp_score, MeasureClassifIMCP, MeasureClassifMCP, nn_IMCP_loss, nn_MCP_loss)
+export(RandomUnderSampler)
 importFrom(data.table, data.table)
 importFrom(mlr3, MeasureClassif, msr)
 importFrom(R6, R6Class)
