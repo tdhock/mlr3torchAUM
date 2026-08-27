@@ -115,7 +115,7 @@ if(torch_available){
     L$predict_type <- "prob"
     L$callbacks <- mlr3torch::t_clbk("history")
     L$param_set$set_values(
-      epochs=20, batch_size=batch_size, seed=1,
+      epochs=20, shuffle=NULL, seed=1,
       measures_valid=measure_list,
       measures_train=measure_list,
       batch_sampler=batch_sampler_list[[batching]])
