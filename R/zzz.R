@@ -13,6 +13,7 @@ register_mlr3torch = function(...) {
   mlr3torch::mlr3torch_losses$add("rocaum", torch_loss_rocaum)
   mlr3torch::mlr3torch_losses$add("aucm", torch_loss_aucm)
   mlr3torch::mlr3torch_losses$add("compositional_auc", torch_loss_compositional_auc)
+  mlr3torch::mlr3torch_losses$add("weighted_bce", torch_loss_weighted_bce)
 }
 
 
