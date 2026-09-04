@@ -49,3 +49,14 @@ nn_AUCM_loss <- torch::nn_module(
     AUCM(pred_tensor, label_tensor, self$a, self$b, self$alpha, self$margin, self$version, self$imratio)
   }
 )
+
+torch_loss_aucm <- function() {
+  mlr3torch::TorchLoss$new(
+    torch_loss = nn_AUCM_loss,
+    task_types = "classif",
+    id         = "aucm",
+    label      = "LibAUC AUCM min-max margin loss",
+    packages   = "mlr3torchAUM",
+    man        = "mlr3torchAUM::nn_AUCM_loss"
+  )
+}

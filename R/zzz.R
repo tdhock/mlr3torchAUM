@@ -10,7 +10,12 @@ register_mlr3 = function() {
 register_mlr3torch = function(...) {
   mlr3torch::mlr3torch_losses$add("pairwise_auc_surrogate", torch_loss_pairwise_auc_surrogate)
   mlr3torch::mlr3torch_losses$add("sq_hinge_loglinear", torch_loss_sq_hinge_loglinear)
+  mlr3torch::mlr3torch_losses$add("rocaum", torch_loss_rocaum)
+  mlr3torch::mlr3torch_losses$add("aucm", torch_loss_aucm)
+  mlr3torch::mlr3torch_losses$add("compositional_auc", torch_loss_compositional_auc)
+  mlr3torch::mlr3torch_losses$add("weighted_bce", torch_loss_weighted_bce)
 }
+
 
 .onLoad = function(libname, pkgname) { # nolint
   # Configure Logger:

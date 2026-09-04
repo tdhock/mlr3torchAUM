@@ -109,3 +109,13 @@ MeasureClassifInvAUC = R6Class(
   )
 )
 
+torch_loss_rocaum <- function() {
+  mlr3torch::TorchLoss$new(
+    torch_loss = nn_ROCAUM_loss,
+    task_types = "classif",
+    id         = "rocaum",
+    label      = "ROC AUM (area under min(FPR, FNR))",
+    packages   = "mlr3torchAUM",
+    man        = "mlr3torchAUM::nn_ROCAUM_loss"
+  )
+}
