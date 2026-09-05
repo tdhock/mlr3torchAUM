@@ -10,6 +10,7 @@ register_mlr3 = function() {
 register_mlr3torch = function(...) {
   mlr3torch::mlr3torch_losses$add("pairwise_auc_surrogate", torch_loss_pairwise_auc_surrogate)
   mlr3torch::mlr3torch_losses$add("sq_hinge_loglinear", torch_loss_sq_hinge_loglinear)
+  mlr3torch::mlr3torch_losses$add("weighted_logistic", torch_loss_weighted_logistic)
 }
 
 .onLoad = function(libname, pkgname) { # nolint

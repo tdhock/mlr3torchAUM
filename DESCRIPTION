@@ -1,7 +1,7 @@
 Package: mlr3torchAUM
 Type: Package
 Title: Area Under the Minimum Learning for 'mlr3torch' Framework
-Version: 2026.8.24
+Version: 2026.9.5
 Encoding: UTF-8
 Authors@R: c(
     person("Toby", "Hocking",
@@ -11,7 +11,11 @@ Authors@R: c(
     person("Wei", "Cao",
      email="wcao23@ubishops.ca",
      role="aut",
-     comment = c(ORCID="0009-0005-0325-350X"))
+     comment = c(ORCID="0009-0005-0325-350X")),
+    person("Aman", "Kashyap",
+     email="akashyap_be23@thapar.edu",
+     role="aut",
+     comment = c(ORCID="0009-0003-2904-3098"))
   )
 Description: Learning with loss functions based on
  Area Under the Minimum of False Positives and False Negatives

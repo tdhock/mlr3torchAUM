@@ -1,3 +1,7 @@
+Changes in version 2026.9.5
+
+- torch_loss_weighted_logistic implemented for binary classification in mlr3torch, supporting automatic inverse class frequency weighting and custom cost matrices.
+
 Changes in version 2026.8.24
 
 - RandomUnderSampler implemented for random under-sampling with optional replacement (bootstrap), supporting 'auto' and 'all' sampling strategies, ported from Python imbalanced-learn reference.
@@ -27,7 +31,7 @@ Changes in version 2026.8.4
   Alternates k cross-entropy batches with k AUC-margin batches. Used together
   with optim_pdsca(PDSCA optimizer for the network weights), and
   make_pdsca_callback.
-  
+
 Changes in version 2026.8.8
 
 - RandomOverSampler implemented for random over-sampling with optional smoothed bootstrap (ROSE method), ported from Python imbalanced-learn reference. Thanks to @tdhock for the guidance and @AmanKashyap0807 for PR.
