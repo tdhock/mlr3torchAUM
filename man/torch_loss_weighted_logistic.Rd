@@ -22,6 +22,12 @@ torch_loss_weighted_logistic(cost_matrix = NULL)
   This loss function is registered in the \code{mlr3torch} loss dictionary
   under the key \code{"weighted_logistic"}. It can be instantiated via
   \code{mlr3torch::t_loss("weighted_logistic")} or directly using \code{torch_loss_weighted_logistic()}.
+
+  \code{mlr3torch::t_loss("cross_entropy")} also wraps \code{nn_bce_with_logits_loss} and accepts
+  a \code{class_weight} argument, but that weight has to be precomputed and passed in manually.
+  This function instead derives the positive class weight automatically from the active training
+  task (or fold, during resampling), so it works without any manual calculation.
+
   When providing a \code{cost_matrix}, it must be a 2x2 matrix with row and column names matching the task class names:
   \itemize{
     \item \strong{Rows}: Predicted class.
